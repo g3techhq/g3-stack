@@ -1,0 +1,44 @@
+# Local development database. Production deployment is a separate concern —
+# see docs/deployment.md.
+services:
+  db-init:
+    image: busybox:1.37
+    user: "0:0"
+    command: ["chown", "-R", "65532:65532", "/data"]
+    volumes:
+      - ./data:/data
+    restart: "no"
+
+  db:
+    image: surrealdb/surrealdb:v3.2.4
+    container_name: g3-app-db
+    ports:
+      # Bound to loopback: Docker's published ports bypass the host firewall,
+      # so a plain "8000:8000" would put a root-credentialed database on
+      # every interface of the machine.
+      - "127.0.0.1:${SURREALDB_PORT:-8000}:8000"
+    restart: unless-stopped
+    command:
+      - start
+      - "--user=${SURREALDB_USER:-root}"
+      - "--pass=${SURREALDB_PASSWORD:-root}"
+      # surrealkv persists to disk. Swap for `memory` if you would rather
+      # every restart start clean.
+      - surrealkv:///data/surrealkv
+    volumes:
+      # `./data` is gitignored. Delete it to reset the database. Note that
+      # SurrealDB rewrites its write-ahead log under here constantly, so
+      # expect the odd `dx serve` hot-reload notice mentioning `data/` — it is
+      # the watcher noticing the database, not your code.
+      - ./data:/data
+    depends_on:
+      # The image writes as UID/GID 65532. A new bind mount is commonly owned
+      # by root, so initialize its ownership before SurrealDB opens SurrealKV.
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/surreal", "isready", "--endpoint", "http://127.0.0.1:8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

@@ -1,0 +1,4 @@
+# Template variables available to `database/schema` and `database/seed`.
+# CLI `--var` values and `SURREALKIT_VAR_*` environment variables win over
+# anything set here.
+[variables]

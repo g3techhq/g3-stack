@@ -1,0 +1,145 @@
+[package]
+name = "g3-app"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89.0"
+publish = false
+description = "A cross-platform app on the g3 stack: Dioxus, SurrealDB, g3-ui, g3-route-transitions, and g3-native-plugins."
+
+[dependencies]
+# --- Core framework -------------------------------------------------------
+# Pinned exactly, because the `dx` CLI refuses a build whose `dioxus` version
+# does not match its own ("dx and dioxus versions are incompatible"). A caret
+# requirement quietly floats to the next patch and starts warning on a clean
+# clone. Bump these and the CLI together:
+#
+#     cargo binstall dioxus-cli@<new version> --force
+dioxus = { version = "=0.7.9", features = ["router", "fullstack"] }
+dioxus-fullstack = "=0.7.9"
+dioxus-icons = "0.1.0"
+manganis = "=0.7.9"
+
+# --- The g3 libraries -----------------------------------------------------
+# The three move together: g3-ui's `transitions` feature and
+# g3-route-transitions' `native-back` feature each depend on the matching
+# release of the next crate down, so a mismatched minor version pulls in two
+# copies and the snapshot classes stop lining up.
+g3-ui = { version = "0.3.0", features = ["transitions"] }
+g3-route-transitions = { version = "0.3.0", features = ["native-back"] }
+# Not optional, and not per-platform: the crate compiles a plugin with no
+# implementation for the current target down to an inert no-op, so one
+# dependency line serves web, Android, iOS, and the server build. Each feature
+# is a separate plugin; enable only the ones you call. The full list, and which
+# platforms each one works on, is in docs/native-plugins.md.
+g3-native-plugins = { version = "0.4.0", features = [
+    "back-button",
+    "clipboard",
+    "external-url",
+] }
+
+# --- Shared (client + server) --------------------------------------------
+# `surrealdb-types` carries the `SurrealValue` derive and the `RecordId` /
+# `Datetime` types used in structs that cross the wire, so it is NOT
+# server-only — the full `surrealdb` client below is.
+surrealdb-types = "=3.2.4"
+cfg-if = "1.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+strum = "0.28.0"
+strum_macros = "0.28.0"
+# Validates the mobile `SERVER_URL` (see `src/server_url.rs`). Already in the
+# dependency tree through the database client, so this costs nothing extra.
+url = "2.5"
+
+# --- Mobile only ----------------------------------------------------------
+# A phone has no browser cookie jar. Without this, the session cookie that
+# `sign_in_guest` sets is dropped on the floor and every later call from a
+# native build comes back 401. `mobile-sim` adds an encrypted-file fallback
+# for simulators and emulators whose keychain is unavailable; the fallback is
+# compiled out of release builds.
+dioxus-cookie = { version = "0.2", default-features = false, optional = true }
+
+# --- Server only ----------------------------------------------------------
+surrealdb = { version = "=3.2.4", optional = true }
+surrealkit = { version = "0.6.3", default-features = false, optional = true }
+tokio = { version = "1.42", features = ["full"], optional = true }
+axum = { version = "0.8.9", optional = true }
+axum-macros = { version = "0.5.0", optional = true }
+axum_session = { version = "0.20.1", optional = true }
+axum_session_auth = { version = "0.20.0", optional = true }
+anyhow = { version = "1.0", optional = true }
+async-trait = { version = "0.1", optional = true }
+dotenv = { version = "0.15", optional = true }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"], optional = true }
+
+[target.'cfg(target_os="android")'.dependencies]
+jni = "0.21.0"
+
+[features]
+default = ["web"]
+
+web = [
+    "dioxus/web",
+]
+
+mobile = [
+    "dioxus/mobile",
+    "dioxus-cookie/mobile-sim",
+    "tokio",
+]
+
+server = [
+    "dioxus/server",
+    "surrealdb",
+    "surrealkit",
+    "tokio",
+    "axum",
+    "axum-macros",
+    "axum_session",
+    "axum_session_auth",
+    "anyhow",
+    "async-trait",
+    "dotenv",
+    "rustls",
+]
+
+# surrealdb-core is most of the database engine; even the remote client
+# depends on it for its wire types. Its debug info runs past a gigabyte and is
+# relinked on every server build, and nobody steps through it.
+[profile.dev.package.surrealdb-core]
+debug = false
+
+[profile.dev.package.surrealdb]
+debug = false
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+# Without debug info the dev wasm drops from ~220 MB to ~18 MB, and the
+# wasm-bindgen pass dx runs on every rebuild from ~22s to ~2s. Panics and
+# stack traces keep their file, line and function names.
+debug = 0
+
+[profile.server-dev]
+inherits = "dev"
+# Line tables keep backtraces readable and cut several seconds off each dx
+# server rebuild. Switch to full debug info when attaching a debugger.
+debug = "line-tables-only"
+
+[profile.android-dev]
+inherits = "dev"
+debug = 0
+strip = "debuginfo"
+
+# `getrandom` needs an explicit browser backend on wasm, and the dependency
+# tree pulls in both major versions — each needs its own opt-in.
+[target.wasm32-unknown-unknown.dependencies.getrandom_v03]
+package = "getrandom"
+version = "0.3.3"
+features = ["wasm_js"]
+
+[target.wasm32-unknown-unknown.dependencies.getrandom_v02]
+package = "getrandom"
+version = "0.2"
+features = ["js"]

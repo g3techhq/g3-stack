@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "dx",
+      "runtimeArgs": [
+        "serve",
+        "--web",
+        "--addr",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "--open",
+        "false",
+        "--interactive",
+        "false"
+      ],
+      "port": 8080
+    }
+  ]
+}

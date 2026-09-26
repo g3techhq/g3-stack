@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+Cargo.lock -diff linguist-generated
+package-lock.json -diff linguist-generated

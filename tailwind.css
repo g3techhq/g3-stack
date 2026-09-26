@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@source "./src/**/*.{rs,html,css}";
+
+/* App-level styles. Deliberately almost empty.
+ *
+ * g3-ui is the styling system: its components carry the iOS and Material
+ * looks, and its `Theme` (see `app_theme` in src/app.rs) sets every color as
+ * a `--color-*` custom property. The order to reach for things:
+ *
+ *   1. A g3-ui component or prop (`Card`, `List`, `Item`, `Button { expand }`).
+ *   2. g3-ui's text classes: `g3-message-text` with `-muted`, `-subtle`,
+ *      `-success`, `-warning`, or `-danger`.
+ *   3. A Tailwind layout utility in `rsx!` (`mx-auto max-w-md`, `whitespace-pre-wrap`).
+ *   4. A rule in this file, only when the same styling repeats across screens.
+ *
+ * Colors always come from a `--color-*` token or a `color-mix()` over one.
+ * A literal silently ignores dark mode and any custom theme.
+ *
+ * Responsive rules query g3-ui's shell, not the viewport:
+ * `@container g3-app-shell (width >= 48rem) { .. }`. The shell is what widens,
+ * so an app embedded in a wide page keeps its phone layout. */
+
+/* Past the width a phone column reads well, center the page instead of
+ * stretching cards across a desktop window. */
+.g3-body-content > * {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  min-width: 0;
+}

@@ -1,0 +1,14 @@
+[files]
+extend-exclude = [
+    "target/**",
+    "node_modules/**",
+    "playwright-report/**",
+    "test-results/**",
+    "dist/**",
+    "assets/tailwind.css",
+]
+
+[default.extend-words]
+dioxus = "dioxus"
+surreal = "surreal"
+surrealdb = "surrealdb"

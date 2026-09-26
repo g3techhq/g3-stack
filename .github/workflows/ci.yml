@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Actions are pinned to a commit rather than a tag. A tag can be moved to point
+# at different code; a SHA cannot. Dependabot keeps the pins current.
+jobs:
+  rust:
+    name: Rust (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Every feature set. A bare `cargo check` only covers the web build on the
+    # host, so a server-only or mobile-only break would otherwise reach main
+    # unnoticed.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: web
+            cargo-args: ""
+            lint-and-test: true
+          - target: server
+            cargo-args: --no-default-features --features server
+            lint-and-test: true
+          - target: mobile
+            cargo-args: --no-default-features --features mobile
+            lint-and-test: false
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # rust-toolchain.toml pins the version and the wasm target; the action
+      # reads it rather than second-guessing it here.
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: clippy, rustfmt
+
+      # `dioxus/mobile` builds wry, which links the system WebView even when
+      # the host is only type-checking.
+      - name: Install WebView libraries
+        if: matrix.target == 'mobile'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ${{ matrix.target }}
+
+      # `asset!()` resolves paths at compile time, and the Tailwind output is
+      # generated rather than committed, so it has to exist before anything
+      # type-checks. `dx` would build it for real; CI only needs the file.
+      - name: Create the generated stylesheet
+        run: touch assets/tailwind.css
+
+      - name: Formatting
+        if: matrix.target == 'web'
+        run: cargo fmt --all -- --check
+
+      - name: Check
+        run: cargo check ${{ matrix.cargo-args }}
+
+      - name: Clippy
+        if: matrix.lint-and-test
+        run: cargo clippy --all-targets --no-deps ${{ matrix.cargo-args }} -- -D warnings
+
+      - name: Tests
+        if: matrix.lint-and-test
+        run: cargo test ${{ matrix.cargo-args }}
+
+  web-tooling:
+    name: Formatting, scripts, and spelling
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Biome
+        run: |
+          npm run format:web:check
+          npm run lint:web
+
+      - name: Script tests
+        run: npm run test:scripts
+
+      - name: Spelling
+        uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1
+
+      - name: Whitespace
+        run: git diff --check
+
+  audit:
+    name: Licenses and advisories
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check

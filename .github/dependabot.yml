@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # The Dioxus crates move together; separate PRs for each would not
+      # compile on their own.
+      dioxus:
+        patterns:
+          - "dioxus*"
+          - "manganis"
+      g3:
+        patterns:
+          - "g3-*"
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

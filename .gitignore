@@ -1,0 +1,46 @@
+# Rust
+/target
+
+# Dioxus build output
+/dist
+
+# Node
+/node_modules
+
+# Generated stylesheet (Dioxus runs Tailwind over tailwind.css on build)
+assets/tailwind.css
+
+# Local SurrealDB data directory created by compose.yml
+/data
+
+# Secrets. Only the templates are committed.
+.env
+.env.local
+.env.surrealkit.*
+
+# Test output
+/playwright-report
+/test-results
+
+# Editor / OS
+.DS_Store
+**/*.rs.bk
+
+# Dotfiles are ignored by default so a stray local tool directory never
+# lands in a commit; the ones the repo actually owns are re-included below.
+.*
+!.gitattributes
+!.gitignore
+!.editorconfig
+!.env.template
+!.env.surrealkit.template
+!.github/
+!.github/**
+!.dockerignore
+# Shared instructions for coding agents. Personal settings stay local.
+!.claude/
+!.claude/launch.json
+!.claude/skills/
+!.claude/skills/**
+!database/rollouts/.gitkeep
+!database/snapshots/.gitkeep
