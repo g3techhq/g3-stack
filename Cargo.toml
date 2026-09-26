@@ -36,6 +36,12 @@ g3-native-plugins = { version = "0.4.0", features = [
     "clipboard",
     "external-url",
 ] }
+# Sessions, the signed-in user, and a guard that denies by default; see
+# src/auth/session.rs. The `server` feature below turns its server side on.
+g3-auth = "0.1.1"
+# The screen cache on the device, server caches, and CDN headers for shared
+# reads. Enable its platform feature in each app feature below.
+g3-cache = "0.1.0"
 
 # --- Shared (client + server) --------------------------------------------
 # `surrealdb-types` carries the `SurrealValue` derive and the `RecordId` /
@@ -81,16 +87,20 @@ default = ["web"]
 
 web = [
     "dioxus/web",
+    "g3-cache/web",
 ]
 
 mobile = [
     "dioxus/mobile",
+    "g3-cache/mobile",
     "dioxus-cookie/mobile-sim",
     "tokio",
 ]
 
 server = [
     "dioxus/server",
+    "g3-auth/server",
+    "g3-cache/server",
     "surrealdb",
     "surrealkit",
     "tokio",

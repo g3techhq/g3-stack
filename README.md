@@ -121,7 +121,7 @@ not a bug report.
 Browser / Android / iOS
         │   server functions: typed Rust calls that compile to HTTP
         ▼
-  axum ── SessionLayer → AuthSessionLayer → auth_check (guarded by default)
+  axum ── SessionLayer → AuthSessionLayer → auth guard (guarded by default)
         │
         ▼
     SurrealDB

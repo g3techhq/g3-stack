@@ -1,4 +1,4 @@
--- Backing table for `axum_session`. `SurrealSessionPool` (src/auth/session_store.rs)
+-- Backing table for `axum_session`. `g3_auth::SurrealSessionPool` (see main.rs)
 -- reads and writes these rows; nothing in the app touches them directly.
 --
 -- SCHEMALESS on purpose: axum_session owns the shape, and pinning it here

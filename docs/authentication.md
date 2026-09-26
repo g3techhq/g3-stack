@@ -10,9 +10,9 @@ Sessions, the auth guard, sign-in, and account deletion. The code is in
 - **Guest sign-in** (`src/auth/guest.rs`). One tap creates a real `user` row and
   a real session. Every screen past sign-in can assume a signed-in user; there
   is no half-signed-in state to design around.
-- **Session cookies** stored in SurrealDB (`axum_session`, with the store in
-  `src/auth/session_store.rs`), resolved to a `SessionUser` on each request by
-  `axum_session_auth`.
+- **Session cookies** stored in SurrealDB (`axum_session`, with the store from
+  [`g3-auth`](https://crates.io/crates/g3-auth)), resolved to a `SessionUser`
+  on each request by `axum_session_auth`.
 - **A guard** that rejects unauthenticated requests by default.
 - **Sign-out** and **account deletion**, both from Settings.
 
@@ -22,20 +22,41 @@ Sessions, the auth guard, sign-in, and account deletion. The code is in
 request
   → SessionLayer         reads the cookie, loads the session row
   → AuthSessionLayer     resolves it to a SessionUser
-  → auth_check           401 or redirect, unless the path is allowlisted
+  → require_session      401 or redirect, unless the path is public
   → your server function StateExtractor { db, session_user, auth_session }
 ```
 
+`src/auth/session.rs` names these for the app: `AppUser` describes the
+account table, and `StateExtractor` is `g3_auth::SessionContext` for it.
+
 ### Guarded by default
 
-`auth_check` in `src/auth/session.rs` rejects every path that is not in
-`is_unsecured_path`. A server function you add is protected without you doing
-anything. Opening one up is a deliberate edit to that list, and a test asserts
-that the app's own endpoints are not on it.
+The guard (`g3_auth::require_session`, installed in `main.rs` with
+`AuthGuard::for_routes(Route::Splash {})`) rejects every request without a
+signed-in user, except for:
 
-Add a path only when it genuinely has to answer a visitor with no session: a
-sign-in endpoint, an OAuth callback, a public share link, a legal page a store
-listing links to, the `.well-known` files for deep links.
+- static assets and `/.well-known/` files (deep-link association files),
+- pages marked `#[public]` on `Route` in `app.rs`, and
+- server functions marked `#[g3_auth::public]`.
+
+A server function or page you add is protected without you doing anything.
+Opening one up is one line beside it, with a comment saying why:
+
+```rust
+/// Public: the splash asks this before it knows whether anyone is signed in.
+#[g3_auth::public]
+#[get("/api/v1/is_signed_in", crate::StateExtractor { auth_session, .. }: crate::StateExtractor)]
+pub async fn is_signed_in() -> Result<bool> { .. }
+```
+
+Tests in `src/auth/session.rs` pin both lists, so opening anything up always
+shows as a reviewed change. Mark something public only when it genuinely has
+to answer a visitor with no session: a sign-in endpoint, an OAuth callback, a
+public share link, a legal page a store listing links to.
+
+Pages are matched against their own `#[route]` and `#[nest]` patterns, never
+by parsing a path into `Route`: the catch-all `#[redirect]` would turn every
+unknown path, `/api/` ones included, into the splash, which is public.
 
 ### 401 for a fetch, redirect for a page
 
@@ -132,7 +153,7 @@ The session machinery stays as it is. What changes is how an account is found.
    stable `sub` claim as the account key. A token the client says is valid is
    still just a string.
 
-4. **Its paths in `is_unsecured_path`.** A sign-in endpoint that requires a
+4. **`#[g3_auth::public]` on its endpoints.** A sign-in endpoint that requires a
    session cannot be reached.
 
 5. **A button on `SignIn`.** On a phone, the credential comes from the

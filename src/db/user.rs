@@ -156,10 +156,9 @@ mod tests {
 
 /// The signed-in account, or `None` for a visitor without a session.
 ///
-/// `#[get]` rather than `#[post]`: it is a read, and the route stays in the
-/// unauthenticated allowlist (see `src/auth/session.rs`) precisely so it can
-/// answer `None` instead of redirecting. A redirect here reaches the client
-/// as sign-in HTML where it expected JSON.
+/// `#[get]` rather than `#[post]`: it is a read. `#[public]` precisely so it
+/// can answer `None` instead of a `401` the splash would have to special-case.
+#[g3_auth::public]
 #[get("/api/v1/user", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
 pub async fn get_current_user() -> Result<Option<User>> {
     if session_user.anonymous {

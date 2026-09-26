@@ -13,37 +13,20 @@ cfg_if::cfg_if! { if #[cfg(feature = "server")] {
 
 use std::sync::Arc;
 
-use axum::middleware::from_fn;
+use axum::middleware::from_fn_with_state;
 use axum_session::{SessionConfig, SessionLayer, SessionStore};
-use axum_session_auth::{AuthConfig, AuthSessionLayer};
-use dioxus::{
-    fullstack::{FullstackContext, axum_core::extract::FromRef},
-    server::axum::Extension,
-};
-use surrealdb::{Surreal, engine::remote::ws::Client};
+use axum_session_auth::AuthConfig;
+use dioxus::server::axum::Extension;
+use g3_auth::{AuthGuard, AuthSessionLayer, SurrealSessionPool, require_session};
+use surrealdb::engine::remote::ws::Client;
 
-use crate::auth::{SessionUser, SurrealSessionPool, auth_check};
+use crate::app::Route;
+use crate::auth::AppUser;
 use crate::db::init_db_connection;
 #[cfg(debug_assertions)]
 use crate::db::sync_dev_schema;
 
 pub use crate::auth::StateExtractor;
-
-/// Everything a server function needs that is not per-request. Reached
-/// through `StateExtractor` rather than directly, so a server function's
-/// signature names what it uses instead of unpacking the world.
-#[derive(Clone, Debug)]
-pub struct AppServerState {
-    db: Arc<Surreal<Client>>,
-}
-
-impl FromRef<FullstackContext> for AppServerState {
-    fn from_ref(state: &FullstackContext) -> Self {
-        state
-            .extension::<AppServerState>()
-            .expect("AppServerState extension is installed in main")
-    }
-}
 
 fn main() {
     // Release builds read the environment the deployment gives them; only
@@ -67,9 +50,11 @@ fn main() {
             .await
             .expect("Failed to synchronize the development database schema.");
 
-        let app_state = AppServerState { db: Arc::clone(&db) };
-
-        let session_config = SessionConfig::default().with_cookie_path("/");
+        // Secure outside debug builds: production is served over HTTPS, and a
+        // session cookie must never ride along on a plain-HTTP request.
+        let session_config = SessionConfig::default()
+            .with_cookie_path("/")
+            .with_secure(!cfg!(debug_assertions));
         let auth_config = AuthConfig::<String>::default();
         let session_store = SessionStore::new(
             Some(SurrealSessionPool::new(Arc::clone(&db))),
@@ -78,22 +63,25 @@ fn main() {
         .await
         .expect("Failed to create the session store.");
 
-        // Layer order is bottom-up: a request passes through SessionLayer,
-        // then AuthSessionLayer, then `auth_check`, then reaches a route. Each
-        // layer here depends on the one listed below it having already run.
+        // Signed-out page loads go to the splash; `#[public]` on `Route` and on
+        // server functions marks what they may reach. Panics here, at startup,
+        // if the splash itself is not public, since the redirect would loop.
+        let auth_guard = AuthGuard::for_routes(Route::Splash {});
+
+        // Layer order is bottom-up: a request passes through the CDN guard,
+        // SessionLayer, AuthSessionLayer, then the auth guard, then reaches a
+        // route. Each layer here depends on the one listed below it having
+        // already run. The database reaches `StateExtractor` through the
+        // `Extension`.
         let router = dioxus::server::router(App)
-            .layer(Extension(app_state))
-            .layer(from_fn(auth_check))
-            .layer(
-                AuthSessionLayer::<
-                    SessionUser,
-                    String,
-                    SurrealSessionPool<Client>,
-                    Arc<Surreal<Client>>,
-                >::new(Some(Arc::clone(&db)))
-                .with_config(auth_config),
-            )
+            .layer(Extension(Arc::clone(&db)))
+            .layer(from_fn_with_state(auth_guard, require_session::<AppUser, Client>))
+            .layer(AuthSessionLayer::<AppUser, Client>::new(Some(Arc::clone(&db))).with_config(auth_config))
             .layer(SessionLayer::new(session_store))
+            // Outside the session layer, so it sees (and drops) the cookie that
+            // layer adds to a response marked `#[cache_shared(cdn = ..)]`, and
+            // marks every other API response `private, no-cache`.
+            .layer(g3_cache::cdn_cache_guard("/api"))
             // Merged, not layered, and merged last: `Router::layer` only wraps
             // routes registered before it, so probes reaching the app this way
             // skip the session and auth layers entirely. A health check should

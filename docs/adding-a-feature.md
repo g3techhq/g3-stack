@@ -147,8 +147,9 @@ The rules, all demonstrated in `src/db/note.rs`:
 - **Unit-test the validation.** It is a plain function; see the tests at the
   bottom of `note.rs`.
 
-New endpoints are guarded by default. Add a path to `is_unsecured_path` in
-`src/auth/session.rs` only if it must answer a signed-out visitor.
+New endpoints are guarded by default. Mark one `#[g3_auth::public]` (above
+its `#[get]` or `#[post]`) only if it must answer a signed-out visitor, and
+say why in a comment; the test in `src/auth/session.rs` pins the list.
 
 ## 4. The route
 

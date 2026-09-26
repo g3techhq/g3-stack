@@ -9,7 +9,7 @@ use g3_ui::{Body, Button, Card, Navbar, Spinner};
 /// It exists because the *server* cannot tell a stale cookie from a
 /// never-signed-in visitor without asking the database, and answering that
 /// inside a middleware would mean a database round trip on every request. So
-/// `auth_check` redirects signed-out page loads here, a native build starts
+/// The auth guard sends signed-out page loads here, a native build starts
 /// here, and this screen asks once.
 ///
 /// Keeping it in one place matters more than it looks: a second guard

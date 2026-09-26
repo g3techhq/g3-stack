@@ -150,9 +150,9 @@ pub async fn create_note(title: String, body: String) -> Result<Note> { .. }
 - Validation is a plain `fn` in the same file, called by both the form and the
   server function, with unit tests.
 - Errors: `dioxus::CapturedError::msg("Human-readable message.")`.
-- Endpoints are guarded by default. Adding to `is_unsecured_path` in
-  `src/auth/session.rs` is a security decision — only for what must work signed
-  out.
+- Endpoints and pages are guarded by default. Marking one `#[g3_auth::public]`
+  (server function) or `#[public]` (a `Route` variant) is a security decision —
+  only for what must work signed out, with a comment saying why.
 - Changing a signature or shared type: update every caller in the same change,
   then `just check`.
 

@@ -103,8 +103,8 @@ can open the app on that note. Three pieces:
 
 2. **Prove you own it.** Serve `/.well-known/apple-app-site-association` and
    `/.well-known/assetlinks.json` from that domain. `g3-native-plugins` has a
-   macro for each; add them to the server build and add both paths to
-   `is_unsecured_path` in `src/auth/session.rs`:
+   macro for each; add them to the server build. The auth guard already lets
+   `/.well-known/` through without a session:
 
    ```rust
    g3_native_plugins::ios_app_site_association_route! {

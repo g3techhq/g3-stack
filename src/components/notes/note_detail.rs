@@ -6,6 +6,7 @@ use crate::{
 };
 use dioxus::prelude::*;
 use dioxus_icons::lucide::Pencil;
+use g3_cache::use_cached;
 use g3_route_transitions::animated_navigate;
 use g3_ui::{Button, ButtonStyle, Card, ConfirmModal, RightSlot, Spinner, StatusColor};
 
@@ -20,13 +21,11 @@ pub fn NoteDetail(id: String) -> Element {
     let navigator = use_navigator();
     let mut confirm_delete = use_signal(|| false);
 
-    // `use_reactive!` so a navigation from one note straight to another —
-    // same component, new `id` — fetches the new one instead of keeping the
-    // resource bound to the id it mounted with.
-    let note = use_resource(use_reactive!(|id| {
-        let _ = (app_state.data_version)();
-        async move { get_note(id).await }
-    }));
+    // Cached on the device, keyed by the server function and its arguments:
+    // reopening a note shows it at once and refetches behind it, and a
+    // navigation from one note straight to another (same component, new `id`)
+    // fetches the new one. `bump_data` after an edit marks it stale.
+    let note = use_cached(get_note, (id.clone(),));
 
     let body = match &*note.read() {
         None => rsx! { Spinner { center: true } },

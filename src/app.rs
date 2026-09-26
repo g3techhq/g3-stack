@@ -13,6 +13,7 @@ use crate::{
     state::{AppState, AppStateProvider},
 };
 use dioxus::prelude::*;
+use g3_auth::PublicRoutes;
 use g3_native_plugins::NativePluginsProvider;
 #[cfg(test)]
 use g3_route_transitions::{NavigationAnimation, RouteTransitions};
@@ -94,21 +95,26 @@ impl NotesFilter {
 ///   steps of a wizard, so moving between them slides the right way.
 ///
 /// Anything with no more specific match falls back to `Fade`.
+///
+/// `#[public]` marks the pages a signed-out visitor may load (see
+/// `auth::session`); a signed-out load of any other page goes to the splash.
 #[route_transitions]
-#[derive(Debug, Clone, Routable, PartialEq)]
+#[derive(Debug, Clone, Routable, PartialEq, PublicRoutes)]
 #[rustfmt::skip]
 pub enum Route {
     // The splash owns `/`, and every unknown path lands there too. It is where
     // the signed-in question gets asked, and it has to be `/` rather than
-    // somewhere `auth_check` redirects to: a native build never makes a
+    // somewhere the auth guard redirects to: a native build never makes a
     // document request for the server to redirect. It simply starts its
     // router at `/`.
     #[redirect("/:.._segments", |_segments: Vec<String>| Route::Splash {})]
     #[layout(RootLayout)]
+        #[public]
         #[route("/")]
         Splash {},
 
         #[transition(replaces = Splash)]
+        #[public]
         #[route("/signin")]
         SignIn {},
 
@@ -199,6 +205,11 @@ pub fn app_theme(scheme: ColorScheme) -> Theme {
 
 #[component]
 pub fn App() -> Element {
+    // First thing: names the device's cache store (rename it for your app),
+    // and refetches what mounted screens show when the app comes back into
+    // view. See `use_cached` in the notes screens.
+    g3_cache::use_client_cache(g3_cache::CacheConfig::new("g3-app"));
+
     rsx! {
         AppStateProvider {
             ThemedShell {}
@@ -350,7 +361,7 @@ mod transition_tests {
 
     #[test]
     fn the_splash_is_the_root_of_the_url_space() {
-        // `auth_check` redirects signed-out page loads here, and a native
+        // The auth guard sends signed-out page loads here, and a native
         // build starts its router here. Both depend on it staying `/`.
         assert_eq!(Route::Splash {}.to_string(), "/");
     }

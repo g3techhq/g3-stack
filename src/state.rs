@@ -30,16 +30,9 @@ pub struct AppState {
 
     pub sign_out_confirm_open: Signal<bool>,
 
-    /// Bumped after any mutation. Screens that display data derived from
-    /// something another screen can change include a read of this in their
-    /// `use_resource` closure — purely to pick up the dependency — so they
-    /// refetch when it moves.
-    ///
-    /// A deliberately blunt instrument. It refetches more than strictly
-    /// necessary, and that is the trade: the alternative is a per-entity
-    /// cache-invalidation scheme, which is a great deal of machinery to get
-    /// subtly wrong in an app this size. Reach for something finer when a
-    /// screen is measurably too slow, not before.
+    /// Bumped after any mutation (see [`AppState::bump_data`]). A screen
+    /// still on `use_resource` reads this in its closure, purely to pick up
+    /// the dependency, so it refetches when it moves.
     pub data_version: Signal<u64>,
 }
 
@@ -63,8 +56,17 @@ impl AppState {
         self.toast_open.set(true);
     }
 
+    /// Call after any mutation: marks every cached read stale, so mounted
+    /// screens refetch while still showing what they had.
+    ///
+    /// A deliberately blunt instrument. It refetches more than strictly
+    /// necessary, and that is the trade: marking only the reads a change can
+    /// affect (`g3_cache::invalidate_cached(list_notes)`) is a map from every
+    /// mutation to every read, which is easy to get subtly wrong. Reach for
+    /// it when a screen is measurably too slow, not before.
     pub fn bump_data(&mut self) {
         self.data_version += 1;
+        g3_cache::invalidate_all_cached();
     }
 
     /// Makes `user` the signed-in account and adopts its saved appearance.
@@ -139,12 +141,25 @@ pub fn AppStateProvider(children: Element) -> Element {
     // which renders until nothing is dirty — never returns a response at all.
     apply_mode(*app_state.mode.peek());
 
+    // Above the `?` below, like every hook here: a hook after an early return
+    // runs on some renders and not others. The client cache holds one user's
+    // data: empty it on sign-out, or when someone else signs in, before their
+    // screens can show it. Nothing persists to disk until this has run.
+    let user = app_state.user;
+    use_effect(move || {
+        let owner = user
+            .read()
+            .as_ref()
+            .map(|user| crate::db::record_key(&user.id));
+        spawn(g3_cache::set_cache_owner(owner));
+    });
+
     // A server future rather than `use_resource`: the server renders with the
     // answer already in hand and ships it with the HTML, so a returning user's
     // first paint is already in their saved theme instead of the default
-    // swapping to theirs once the WASM boots. `/api/v1/user` is outside the
-    // auth guard, so a signed-out visitor gets `Ok(None)` rather than a
-    // redirect this cannot decode.
+    // swapping to theirs once the WASM boots. `/api/v1/user` is
+    // `#[g3_auth::public]`, so a signed-out visitor gets `Ok(None)` rather
+    // than a `401`.
     let current_user = use_server_future(get_current_user)?;
 
     // Runs once per answer, not once per render: nothing else this component

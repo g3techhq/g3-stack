@@ -273,6 +273,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-lock"
+version = "3.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290f7f2596bd5b78a9fec8088ccd89180d7f9f55b94b0576823bbbdc72ee8311"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-recursion"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3008,7 +3019,9 @@ dependencies = [
  "dioxus-fullstack",
  "dioxus-icons",
  "dotenv",
- "g3-native-plugins",
+ "g3-auth",
+ "g3-cache",
+ "g3-native-plugins 0.4.1",
  "g3-route-transitions",
  "g3-ui",
  "getrandom 0.2.17",
@@ -3025,6 +3038,69 @@ dependencies = [
  "surrealkit",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "g3-auth"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39bc034a49ab69aafcd7b53fb813e8e4a6304d08270416f0c80f05ba6eb8c00e"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "axum_session",
+ "axum_session_auth",
+ "chrono",
+ "g3-auth-macros",
+ "inventory",
+ "surrealdb",
+ "surrealdb-types",
+]
+
+[[package]]
+name = "g3-auth-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4981b5e61a851a837b84208557f5a70349759e8200567206e7645528f654fa8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "g3-cache"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd7caed34724847b4a05491a15c4d941b7831ea2d488f1efcd3ba739fca470b8"
+dependencies = [
+ "axum",
+ "chrono",
+ "dioxus",
+ "g3-cache-macros",
+ "jni 0.21.1",
+ "moka",
+ "ndk-context",
+ "redb",
+ "rexie",
+ "serde",
+ "serde_json",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "g3-cache-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b81b76f29cb65a31e41523efad930adadf64f5779981b3ef6e96665b7a0bda6d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3047,13 +3123,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "g3-native-plugins"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "273768f73da282cc1bca09a2c55fa0d058dd385f3138d5a14e1eb6f915841b49"
+dependencies = [
+ "cfg-if",
+ "dioxus",
+ "dioxus-signals",
+ "jni 0.21.1",
+ "js-sys",
+ "manganis",
+ "ndk-context",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "g3-route-transitions"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbce266377a3bca154e2c895b892adfc97987ed91f352d651b2d9bd83d9a9e02"
 dependencies = [
  "dioxus",
- "g3-native-plugins",
+ "g3-native-plugins 0.3.0",
  "g3-route-transitions-macros",
  "manganis",
  "web-sys",
@@ -4066,6 +4161,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "idb"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6554f394e990a1af530a528a7fdcad6e01b29cb1b990f89df3ffd62cf15f7828"
+dependencies = [
+ "indexmap",
+ "js-sys",
+ "num-traits",
+ "thiserror 2.0.20",
+ "tokio",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4861,6 +4971,26 @@ dependencies = [
  "libc",
  "wasi 0.11.1+wasi-snapshot-preview1",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "moka"
+version = "0.12.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4293f18e7567a1caf3c584855554377025c65e0aa445344d04171f5ad63d19b9"
+dependencies = [
+ "async-lock",
+ "crossbeam-channel",
+ "crossbeam-epoch",
+ "crossbeam-utils",
+ "equivalent",
+ "event-listener",
+ "futures-util",
+ "parking_lot",
+ "portable-atomic",
+ "smallvec",
+ "tagptr",
+ "uuid",
 ]
 
 [[package]]
@@ -6448,6 +6578,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03251193000f4bd3b042892be858ee50e8b3719f2b08e5833ac4353724632430"
 
 [[package]]
+name = "redb"
+version = "4.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb338a6c67830a61bed824b78c2bb034ab1ff401a20616bd7957524f4fdc2f22"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6607,6 +6746,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "rexie"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "887466cfa8a12c08ee4b174998135cea8ff0fd84858627cd793e56535a045bc9"
+dependencies = [
+ "idb",
+ "thiserror 1.0.69",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -7937,6 +8087,12 @@ dependencies = [
  "toml",
  "version-compare",
 ]
+
+[[package]]
+name = "tagptr"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
 
 [[package]]
 name = "tao"

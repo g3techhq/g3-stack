@@ -26,6 +26,9 @@ fn guest_handle() -> String {
 /// `session_user` exists instead of carrying a signed-out branch. Attaching
 /// an email or an OAuth provider later fills in this same row rather than
 /// creating a second one.
+///
+/// Public: signing in is what creates the session.
+#[g3_auth::public]
 #[post("/api/v1/sign_in_guest", crate::StateExtractor { db, auth_session, .. }: crate::StateExtractor)]
 pub async fn sign_in_guest() -> Result<User> {
     use crate::db::CreateUser;

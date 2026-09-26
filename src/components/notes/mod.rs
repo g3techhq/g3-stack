@@ -2,8 +2,8 @@
 //!
 //! Four screens covering the shapes most features need: a list, a detail
 //! page, a create form, and an edit form. Between them they show every
-//! transition kind, `use_resource` fetching, optimistic mutation, and the
-//! shared toast.
+//! transition kind, cached (`use_cached`) and `use_resource` fetching,
+//! optimistic mutation, and the shared toast.
 //!
 //! Delete this directory (plus `src/db/note.rs` and
 //! `database/schema/note.surql`) when you start on your own domain.

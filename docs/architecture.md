@@ -52,11 +52,11 @@ three.
   ├─────────────────────────────────────────────────────┤
   │ AuthSessionLayer      resolves it to a SessionUser  │
   ├─────────────────────────────────────────────────────┤
-  │ auth_check            401 (or redirect) if the path │
-  │                       is not allowlisted and there  │
-  │                       is no session                 │
+  │ require_session       401 (or redirect) if nothing  │
+  │                       marks the path public and     │
+  │                       there is no session           │
   ├─────────────────────────────────────────────────────┤
-  │ Extension(AppServerState)   the shared DB handle    │
+  │ Extension(Arc<Surreal<Client>>)  the shared DB      │
   └─────────────────────────────────────────────────────┘
         │
         ▼
@@ -70,7 +70,7 @@ Two ordering facts in `src/main.rs` are load bearing:
 
 **Layers apply bottom-up.** `SessionLayer` is listed last and runs first,
 because `AuthSessionLayer` needs a session before it can resolve a user, and
-`auth_check` needs a resolved user before it can decide anything.
+the auth guard needs a resolved user before it can decide anything.
 
 **The health router is merged, not layered, and merged last.** `Router::layer`
 only wraps routes registered before it, so merging afterwards keeps probes out
@@ -106,8 +106,10 @@ session survives between calls. See [mobile.md](mobile.md).
 
 Covered in full in [authentication.md](authentication.md). The shape:
 
-- **Guarded by default.** `auth_check` rejects any path not on
-  `is_unsecured_path`'s allowlist.
+- **Guarded by default.** `g3_auth::require_session` rejects any request
+  without a session unless it is a static asset, a `/.well-known/` file, a
+  page marked `#[public]` on `Route`, or a server function marked
+  `#[g3_auth::public]`.
 - **401 for a fetch, redirect for a navigation**, decided by `Sec-Fetch-Dest`
   (or the `/api/` prefix without it). A redirect served to a `fetch` comes back
   as HTML the caller cannot decode.
