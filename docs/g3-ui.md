@@ -1,6 +1,6 @@
 # g3-ui reference
 
-The components the template builds with, and their props, as of `g3-ui` 0.4.3
+The components the template builds with, and their props, as of `g3-ui` 0.4.4
 with the `transitions` feature. Written so you (or your coding agent) can build
 a screen without guessing. The full reference is
 [docs.rs/g3-ui](https://docs.rs/g3-ui), and the
