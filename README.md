@@ -147,15 +147,15 @@ create_note(title, body).await
 And a screen's motion is declared where its URL is:
 
 ```rust
-#[transition(root, replace)]
+#[transition(layer = stack_root, history = replace)]
 #[route("/notes?:filter")]
 Notes { filter: Option<NotesFilter> },
 
-#[transition(pushed)]
+#[transition(layer = stack_page)]
 #[route("/notes/:id")]
 NoteDetail { id: String },
 
-#[transition(cover)]
+#[transition(layer = sheet)]
 #[route("/notes/:id/edit")]
 EditNote { id: String },
 ```
@@ -165,14 +165,16 @@ EditNote { id: String },
 ```
 src/
 ├── app.rs              ★ Routes, transitions, theme — read this first
-├── state.rs            AppState: the user, appearance, shared overlays
+├── state.rs            AppState: the user, appearance, `changed`
+├── data_change.rs      What each kind of mutation makes stale in the client cache
 ├── main.rs             Server: database, session layers, router
 ├── server_url.rs       Where a mobile build sends its calls
 ├── auth/               Session guard, sign-in, sign-out, account deletion
 ├── db/                 One file per table: row types + server functions
 │   └── note.rs         ★ The worked example
 └── components/
-    ├── shell/          Tab shell, page shell, back button, overlays
+    ├── shell/          Tab shell, sheet shell, navigation, back button
+    ├── shared/         Load failures, error text, confirmations
     ├── auth/           Splash, sign-in
     ├── notes/          ★ The example screens
     └── settings.rs     Appearance, native plugins, account

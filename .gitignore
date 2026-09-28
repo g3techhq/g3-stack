@@ -42,5 +42,9 @@ assets/tailwind.css
 !.claude/launch.json
 !.claude/skills/
 !.claude/skills/**
+# The editor setting that keeps `dx fmt` from corrupting rsx! on save.
+!.vscode/
+.vscode/*
+!.vscode/settings.json
 !database/rollouts/.gitkeep
 !database/snapshots/.gitkeep

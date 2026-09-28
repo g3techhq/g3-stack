@@ -13,8 +13,9 @@ worked example to copy is notes: `database/schema/note.surql`, `src/db/note.rs`,
 
 - Read `AGENTS.md` if you have not this session.
 - Read `docs/g3-ui.md` for the components you will need. Do not guess props.
-- Decide the route layer now (`root` tab, `pushed` page, `cover` sheet) using
-  `docs/navigation.md`. Say which and why in one line.
+- Read `docs/dioxus/patterns.md` if you have not this session.
+- Decide the route layer now (`stack_root` tab, `stack_page` page, `sheet`)
+  using `docs/navigation.md`. Say which and why in one line.
 
 ## 1. Schema — `database/schema/<table>.surql`
 
@@ -38,36 +39,47 @@ worked example to copy is notes: `database/schema/note.surql`, `src/db/note.rs`,
 - Register in `src/db/mod.rs`.
 - Run `just check`.
 
-## 3. Route — `src/app.rs`
+## 3. Cache invalidation — `src/data_change.rs`
 
-- Add the variant with `#[transition(..)]` in the right layout
-  (`AppShell` for tabs, `PushedPageLayout` for pushed pages, between them for
-  covers).
-- Per-screen state (filters, tabs) as route fields, with `replace`.
-- Add assertions to `transition_tests` for what the route should do.
-- Add a fallback for it in `src/components/shell/back_button.rs` if it has a
-  back button.
+- Add a `DataChange` variant for the new mutations, listing every cached read
+  whose query touches the tables they write (including other features' reads).
 
-## 4. Screen — `src/components/<feature>/`
+## 4. Route — `src/app.rs`
 
-- Pushed pages and covers wrap themselves in `PageShell { title: .., end_button: .. }`.
-  Tabs render inside `AppShell` and add their title to its `match`.
-- All hooks first. `use_resource` reading `(app_state.data_version)()`;
-  `use_reactive!` for props that feed it.
-- Render four states: `Spinner { center: true }`; a `Card` with the error and a
-  retry `Button`; a `Card` empty state; the content (usually `List`/`Item`).
-- Mutations: call the server function in `spawn`, then `app_state.bump_data()`
-  and `app_state.show_toast(..)`; navigate with `animated_navigate` /
-  `animated_go_back`.
-- g3-ui components only. No new CSS classes; supporting text uses
-  `g3-message-text g3-message-text-muted`; Tailwind only for layout.
+- Add the variant with `#[transition(layer = ..)]` in the right layout: the
+  first `AppShell` block for tabs, `SheetShell` for sheets, the last
+  `AppShell` block for pushed pages.
+- Per-screen state (filters, tabs) as route fields, with `history = replace`.
+- `forward_to` on pages that open another pushed page.
+- Add assertions to `transition_tests` if the motion is not obvious.
+- Add a fallback for it in `src/components/shell/back_button.rs`.
+
+## 5. Screen — `src/components/<feature>/`
+
+- Pushed pages and sheets render `Header { title, start: rsx! { BackButton {} } }`
+  then `Content { .. }`. Tabs render inside `AppShell` and add their title to
+  its `match`.
+- All hooks first, before any early return. Reads are
+  `use_cached(server_fn, (args,))`; route and component props read inside a
+  hook are `ReadSignal<T>`. No `use_reactive!`, no signal writes in the body.
+- Render four states: `Spinner`; `LoadFailed`; an `EmptyState` saying what
+  will appear; the content (usually `List`/`Item`), borrowed from the read
+  guard, rows capturing an index (`peek_row`) rather than cloning ids.
+- A form's draft lives in its own component, seeded from props (`NoteForm`).
+- Mutations: call the server function, then
+  `app_state.changed(DataChange::..)`, with `use_toast()` for feedback and
+  `error_message` for server errors. For instant feedback, `update_cached`
+  first. Mutations take the target state, not a toggle.
+- Navigate with `animated_navigate`; back is `BackButton`.
+- g3-ui components only. No new CSS classes; copy is `Text { tone }`;
+  Tailwind only for layout.
 - Register with `mod`/`pub use` in the feature's `mod.rs` and in
   `src/components/mod.rs`.
 
-## 5. Finish
+## 6. Finish
 
 ```bash
-just check && just test && just lint
+just check && just test && just lint-strict
 ```
 
 Then use the `verify-in-browser` skill to walk the new flow at 390×844. Report

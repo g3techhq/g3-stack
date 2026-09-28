@@ -8,15 +8,14 @@ left over. This template has one app-level CSS rule.
 
 ## The order to reach for things
 
-1. **A g3-ui component or prop.** A block of content is a `Card`. A row is an
-   `Item`. A group of rows is a `List { inset: true }`. A full-width button is
-   `Button { expand: true }`. An empty state is a `Card` with a `Button` in it.
-   The catalog, with props, is [g3-ui.md](g3-ui.md).
-2. **g3-ui's text classes**, for a paragraph of your own:
-   `p { class: "g3-message-text g3-message-text-muted", ".." }`.
+1. **A g3-ui component or prop.** A page is `Header` + `Content`. A block of
+   content is a `Card`. A row is an `Item` in a `List`. A vertical flow is a
+   `Stack`. A full-width button is `Button { expand: ButtonExpand::Block }`.
+   An empty or failed state is an `EmptyState`. The catalog, with props, is
+   [g3-ui.md](g3-ui.md).
+2. **`Text`**, for copy of your own: `Text { tone: TextTone::Secondary, ".." }`.
 3. **A Tailwind layout utility** in `rsx!`, for arrangement g3-ui does not
-   decide for you: `mx-auto max-w-md` to narrow a sign-in card,
-   `whitespace-pre-wrap` to keep a user's line breaks.
+   decide for you: `whitespace-pre-wrap` to keep a user's line breaks.
 4. **A rule in `tailwind.css`**, only when the same styling repeats across
    screens or needs a container query.
 
@@ -27,8 +26,8 @@ Every step down the list gives some of it up.
 ## What not to do
 
 - **No color literals.** `color: #6b7280` ignores dark mode and every custom
-  theme. Use a token — `var(--color-text-secondary)` — or `color-mix()` over
-  one: `color-mix(in srgb, var(--color-focused) 16%, var(--color-card))`.
+  theme. Use a token (`var(--g3-color-text-secondary)`) or `color-mix()` over
+  one: `color-mix(in srgb, var(--g3-color-accent) 16%, var(--g3-color-card))`.
 - **No viewport media queries.** The g3-ui shell is a named container, and it is
   the shell that widens. Query it:
 
@@ -47,12 +46,11 @@ Every step down the list gives some of it up.
   [g3-ui](https://github.com/g3techhq/g3-ui/issues) — the fix belongs in the
   library, where every app gets it.
 - **No hand-built versions of components that exist.** A `div` styled like a
-  card will not pick up the Material elevation, the nested-card tint, or the
-  desktop spacing.
+  card will not pick up the Material elevation or the desktop spacing.
 
 Where g3-ui intends a value to be tuned, it exposes a custom property instead,
 such as `--g3-sheet-max-height` for one sheet's height or
-`--g3-navbar-rail-width` for the desktop rail. Setting those is fine.
+the rail width. Check g3-ui's stylesheet for the names. Setting those is fine.
 
 ---
 
@@ -63,33 +61,31 @@ Everything about color is `app_theme` in `src/app.rs`:
 ```rust
 pub fn app_theme(scheme: ColorScheme) -> Theme {
     match scheme {
-        ColorScheme::Light => Theme::default_light().with_focused("#2563eb"),
-        ColorScheme::Dark => Theme::default_dark().with_focused("#3b82f6"),
+        ColorScheme::Light => Theme::default_light().with_accent("#2563eb"),
+        ColorScheme::Dark => Theme::default_dark().with_accent("#3b82f6"),
     }
 }
 ```
 
-`with_focused` changes the accent, which is most of what makes an app look like
+`with_accent` changes the accent, which is most of what makes an app look like
 itself: primary buttons, selected segments and tabs, toggles, focus rings, and
 links all derive from it.
 
-For a full palette, override any of the 17 fields with struct-update syntax. A
-warm light theme, for example:
+For a full palette, override any field with struct-update syntax (the fields
+are listed in [g3-ui.md](g3-ui.md#theme)). A warm light theme, for example:
 
 ```rust
 ColorScheme::Light => Theme {
-    focused: "#a9530b".into(),
+    accent: "#a9530b".into(),
     bg: "#e8dcc8".into(),
     bg_secondary: "#dccdb4".into(),
     card: "#f5ede0".into(),
-    card_inset: "#ebe0cd".into(),
     surface: "#f0e6d5".into(),
     control: "#e2d4bd".into(),
-    card_border: "#c9b391".into(),
+    border: "#c9b391".into(),
     text: "#342a21".into(),
     text_secondary: "#6e5c4a".into(),
-    label_primary: "#342a21".into(),
-    label_secondary: "#7a6653".into(),
+    text_tertiary: "#7a6653".into(),
     ..Theme::default_light()
 },
 ```
@@ -127,7 +123,7 @@ Apple devices, Material elsewhere) and read `prefers-color-scheme`.
 use dioxus_icons::lucide::{NotebookPen, Settings as SettingsIcon};
 
 NotebookPen { size: 24 }
-Pin { size: 18, color: "var(--color-focused)" }
+Pin { size: 18, color: "var(--g3-color-accent)" }
 ```
 
 Import with an alias when a name collides with one of yours or with a Rust

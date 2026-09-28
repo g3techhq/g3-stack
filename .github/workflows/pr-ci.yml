@@ -33,13 +33,13 @@ jobs:
         include:
           - target: web
             cargo-args: ""
-            lint-and-test: true
+            test: true
           - target: server
             cargo-args: --no-default-features --features server
-            lint-and-test: true
+            test: true
           - target: mobile
             cargo-args: --no-default-features --features mobile
-            lint-and-test: false
+            test: false
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -79,12 +79,13 @@ jobs:
       - name: Check
         run: cargo check ${{ matrix.cargo-args }}
 
+      # Every feature set, warnings as errors: a lint that only fires in the
+      # mobile build is still a lint.
       - name: Clippy
-        if: matrix.lint-and-test
-        run: cargo clippy --all-targets --no-deps ${{ matrix.cargo-args }} -- -D warnings
+        run: cargo clippy --no-deps ${{ matrix.cargo-args }} ${{ matrix.test && '--all-targets' || '' }} -- -D warnings
 
       - name: Tests
-        if: matrix.lint-and-test
+        if: matrix.test
         run: cargo test ${{ matrix.cargo-args }}
 
   web-tooling:

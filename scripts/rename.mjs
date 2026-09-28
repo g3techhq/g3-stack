@@ -3,7 +3,7 @@
  * Renames the template to your app.
  *
  * The template ships as `g3-app`, which appears in the crate name, the bundle
- * identifier, the container name, the database namespace, and the dockerfile's
+ * identifier, the container name, the database namespace, and the Dockerfile's
  * binary path. Renaming by hand means finding all of them; this finds them for
  * you.
  *
@@ -53,7 +53,7 @@ const TEXT_EXTENSIONS = new Set([
   ".sh",
 ]);
 
-const NO_EXTENSION_FILES = new Set(["dockerfile", "justfile", ".env.template", ".dockerignore"]);
+const NO_EXTENSION_FILES = new Set(["Dockerfile", "justfile", ".env.template", ".dockerignore"]);
 
 // This script and its test mention the template's own names on purpose.
 const SELF = new Set(["rename.mjs", "rename.test.mjs"]);

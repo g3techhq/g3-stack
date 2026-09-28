@@ -38,7 +38,7 @@ for server-side token validation. See [authentication.md](authentication.md#oaut
 docker build -t my-app:latest .
 ```
 
-The dockerfile uses `cargo-chef`, so a dependency layer is cached and an
+The Dockerfile uses `cargo-chef`, so a dependency layer is cached and an
 app-code change rebuilds only the app. The first build is slow — it compiles the
 whole tree twice, once for the host server and once for WASM.
 
@@ -55,7 +55,7 @@ They are separate so a container runtime can tell "the process is wedged" from
 "a dependency is down" and restart only in the first case. Point restart
 policies at liveness and load-balancer registration at readiness.
 
-The dockerfile's `HEALTHCHECK` uses readiness, and a test in `src/health.rs`
+The Dockerfile's `HEALTHCHECK` uses readiness, and a test in `src/health.rs`
 asserts that it does.
 
 ---

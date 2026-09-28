@@ -119,6 +119,64 @@ Covered in full in [authentication.md](authentication.md). The shape:
 
 ---
 
+## Data and the caches
+
+Three caches, from [`g3-cache`](https://github.com/g3techhq/g3-cache), each
+for a different job:
+
+| | Client | Server | CDN |
+| --- | --- | --- | --- |
+| **For** | Showing the last known answer at once | Not repeating slow or rate-limited calls to another service | Answering identical public requests without the server |
+| **Here** | `use_cached` on every screen read | None yet: add a `ServerCache` beside the server function that calls out | None yet: `#[cache_shared(cdn = ..)]` on a public `#[get]` |
+| **Refreshed by** | Screen opens, `app_state.changed`, app focus | Expiry | Expiry |
+
+**The rule:** data that depends on who is asking is cached on the client only.
+Data that is the same for everyone may also be cached on the server and at the
+CDN. `#[cache_shared]` refuses, at compile time, functions that bind a session.
+`g3_cache::cdn_cache_guard` in `src/main.rs` strips the session cookie from a
+response marked shareable, so a CDN never stores one visitor's cookie.
+
+### Reads
+
+```rust
+let notes = use_cached(list_notes, ());
+```
+
+`use_cached` keys the read by the server function and its arguments, shows the
+stored answer at once (IndexedDB on the web, redb on mobile), and refetches in
+the background. Screens therefore paint from the cache on a reload and never
+hold more than what they show: the client stores answers to reads, not tables.
+
+The store belongs to one account. `AppStateProvider` calls
+`g3_cache::set_cache_owner` whenever the user changes, which empties it on
+sign-out or when someone else signs in, before their screens can show it.
+
+`use_resource` remains only for reads that change per keystroke (a search),
+where caching every answer is waste, and for answers that must not come from a
+cache (the splash's "am I signed in?"). The per-keystroke ones read
+`(app_state.data_version)()` so a mutation elsewhere refetches them.
+
+### Writes
+
+```rust
+if delete_note(id).await.is_ok() {
+    app_state.changed(DataChange::Notes);
+}
+```
+
+A mutation reports what it changed. `src/data_change.rs` maps each
+`DataChange` to every cached read whose query touches the tables it writes,
+and marks them stale; mounted screens refetch while still showing what they
+had. It errs toward refetching: a read left off shows stale data until its
+screen reopens or the app regains focus, while an extra one costs a request.
+
+For instant feedback, `update_cached` the affected reads first, then call the
+server, then `changed(..)` to reconcile, as pinning a note does. Mutations take
+the target state (`set_note_pinned(id, true)`), not a toggle, so a device
+showing stale state cannot undo another's change.
+
+---
+
 ## State
 
 **Per-screen state goes in the URL. Cross-cutting state goes in `AppState`.**
@@ -126,17 +184,13 @@ Covered in full in [authentication.md](authentication.md). The shape:
 A filter, a tab, a search term belongs in the route: it survives a refresh,
 Back walks through it, and a filtered view is something you can link to.
 
-`AppState` (`src/state.rs`) is for what genuinely spans screens — the signed-in
-user, the appearance, the shared toast and sign-out confirmation. Every field is
+`AppState` (`src/state.rs`) is for what genuinely spans screens: the signed-in
+user and the appearance. Toasts and alerts need nothing there; `use_toast` and
+`use_alert` open them in the host `AppWrapper` provides. Every field is
 a `Signal`, which is `Copy`, so `AppState` itself is `Copy` and captures into
 `move` closures and `spawn(async move { .. })` without a borrow-checker
 argument. That is why it is a struct of signals rather than a signal of a
 struct.
-
-`data_version` is the refetch mechanism: a mutation bumps it, and any
-`use_resource` that reads it refetches. Deliberately blunt — it refetches more
-than strictly necessary, and the alternative is a per-entity cache scheme that
-is a lot of machinery to get subtly wrong at this size.
 
 ### The first paint is already themed
 
@@ -147,10 +201,12 @@ than refetching. A returning user never sees the default theme flash and swap.
 
 Two consequences, both handled in the code and worth knowing:
 
-- The provider applies the user with `peek`, not a tracked read, because it
-  also writes those signals. A tracked read there is a render loop — and during
-  server rendering, which runs until nothing is dirty, a request that never
-  returns.
+- The provider applies the user during render, the one place the template
+  writes a signal there: effects never run during SSR, so an effect would
+  render the default theme on the server. The write is guarded (only when the
+  answer differs from what is applied) and the provider reads with `peek`, not
+  a tracked read. A tracked read there is a render loop, and during server
+  rendering, which runs until nothing is dirty, a request that never returns.
 - Head elements (`document::Link`) live *inside* the provider, in
   `ThemedShell`. Fullstack hydrates head elements and server futures from one
   ordered stream. The provider suspends on the server, so anything beside it
@@ -165,16 +221,16 @@ Two consequences, both handled in the code and worth knowing:
 App
 └── AppStateProvider          AppState, loads the user once (server future)
     └── ThemedShell           head links, then:
-        └── AppWrapper        theme tokens as CSS custom properties, iOS/MD mode
-            └── NativePluginsProvider
+        └── NativePluginsProvider
+            └── AppWrapper    theme tokens as CSS custom properties, iOS/MD mode,
+                │             the toast and alert host
                 └── Router
                     └── RootLayout          native back navigation
                         ├── Splash, SignIn
-                        ├── AppShell        tabs: header, Outlet, tab bar
-                        ├── NewNote, EditNote            (cover)
-                        ├── PushedPageLayout
-                        │   └── NoteDetail               (pushed)
-                        └── AppOverlays     toast, sign-out confirmation
+                        ├── AppShell        tabs: header, Content, nav
+                        │                   (Notes, Settings)
+                        ├── SheetShell      NewNote, EditNote        (layer = sheet)
+                        └── AppShell        NoteDetail               (layer = stack_page)
 ```
 
 `AppWrapper` writes the theme as inline CSS custom properties on the shell
@@ -182,12 +238,8 @@ element, so a new `Theme` re-themes the whole tree without remounting it —
 navigation, scroll position, and half-typed form state survive a light/dark
 switch.
 
-`AppOverlays` sits in `RootLayout`: inside the router (signing out navigates,
-and `use_navigator` panics outside one) but above every route, so a backdrop
-covers the whole frame and a toast raised just before a navigation outlives it.
-
-`AppShell` is the responsive part. The same tree renders as a bottom tab bar on
-a phone and a left rail from 48rem — a container query on the shell's width, not
+`AppShell` is the responsive part. Its `AdaptiveNav` renders as a bottom tab
+bar on a phone and a left rail from 48rem — a container query on the shell's width, not
 the viewport's, so an app embedded in a wide page keeps its phone layout.
 
 Transitions are declared on the route enum and covered in

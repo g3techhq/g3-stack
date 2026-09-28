@@ -40,8 +40,12 @@ Type-checking proves it compiles. This proves it works.
   markup that differs between server and client, or a head element beside a
   `use_server_future`. `already borrowed` is a signal borrow held across an
   await. A 404 on an asset is a path problem.
-- After a Rust edit, `dx` may hot-reload into a broken state and log panics from
-  `hotreload_utils`. Reload the page before treating those as real.
+- Stop `dx serve` before editing Rust. A failed hot-patch leaves a build
+  that stays on "Loading" with `Failed to resolve module specifier "env"` in
+  the console; the fix is in `docs/troubleshooting.md`.
+- A tap that navigates nowhere, with a clean console, can be the browser
+  window being hidden: view transitions wait for a paint that never comes.
+  Bring the window forward before calling it a bug.
 
 ## 4. Report
 

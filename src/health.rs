@@ -75,7 +75,7 @@ mod tests {
     fn the_container_probes_readiness_not_liveness() {
         // A liveness probe here would keep a container in service while it
         // cannot reach the database.
-        let dockerfile = include_str!("../dockerfile");
+        let dockerfile = include_str!("../Dockerfile");
         assert!(dockerfile.contains("HEALTHCHECK"));
         assert!(dockerfile.contains(READY_PATH));
     }

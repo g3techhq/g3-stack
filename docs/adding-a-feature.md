@@ -2,7 +2,7 @@
 
 The notes feature is the reference implementation. This walks through building
 the equivalent from scratch, in the order the pieces depend on each other:
-table, Rust types, server functions, route, screen.
+table, Rust types, server functions, cache invalidation, route, screen.
 
 The example: **tags**, so notes can be labelled.
 
@@ -151,109 +151,136 @@ New endpoints are guarded by default. Mark one `#[g3_auth::public]` (above
 its `#[get]` or `#[post]`) only if it must answer a signed-out visitor, and
 say why in a comment; the test in `src/auth/session.rs` pins the list.
 
-## 4. The route
+## 4. What a change makes stale
 
-In `src/app.rs`, add a variant and say how it arrives. A pushed page goes inside
-`#[layout(PushedPageLayout)]`:
+Screens read through the client cache, so a mutation has to say what it
+changed. In `src/data_change.rs`, add a variant and the reads it affects:
 
 ```rust
-#[transition(pushed)]
+pub enum DataChange {
+    Notes,
+    /// A tag was created or deleted (`create_tag`, `delete_tag`).
+    Tags,
+}
+
+// in `invalidate`:
+DataChange::Tags => invalidate_cached(list_tags),
+```
+
+A read left off a list shows stale data until its screen reopens; an extra
+one only costs a request, so err toward listing it.
+
+## 5. The route
+
+In `src/app.rs`, add a variant and say how it arrives. A pushed page goes in
+the second `#[layout(AppShell)]` block:
+
+```rust
+#[transition(layer = stack_page)]
 #[route("/tags")]
 Tags {},
 ```
 
-Pick the layer from [navigation.md](navigation.md): `root` for a tab, `pushed`
-for a page above one, `cover` for a sheet. Then assert what you meant in
-`transition_tests` at the bottom of the file:
+Pick the layer from [navigation.md](navigation.md): `layer = stack_root` for a
+tab, `layer = stack_page` for a page above one, `layer = sheet` for a task in
+`#[layout(SheetShell)]`. If its motion is not obvious from the layer, assert
+what you meant in `transition_tests` at the bottom of the file:
 
 ```rust
 #[test]
 fn the_tag_list_pushes_over_settings() {
-    assert_eq!(Route::Settings {}.transition_to(&Route::Tags {}), NavigationAnimation::PushLeft);
-    assert_eq!(Route::Tags {}.transition_back(), NavigationAnimation::PushRight);
+    assert_eq!(Route::Settings {}.transition_to(&Route::Tags {}), NavigationTransition::Forward);
+    assert_eq!(Route::Tags {}.transition_back(), NavigationTransition::Backward);
 }
 ```
 
-If the page has a back button, give it a sensible fallback in the `match` in
-`src/components/shell/back_button.rs`.
+Give it a fallback in the `match` in `src/components/shell/back_button.rs`,
+for when the page is opened directly with nothing behind it.
 
-## 5. The screen
+## 6. The screen
 
-`src/components/tags/tag_list.rs`. Built from g3-ui components only — no custom
-CSS. The component catalog is [g3-ui.md](g3-ui.md).
+`src/components/tags/tag_list.rs`. Built from g3-ui components only, with no
+custom CSS. The component catalog is [g3-ui.md](g3-ui.md).
 
 ```rust
-use crate::{components::PageShell, db::{list_tags, record_key}, state::AppState};
+use crate::{
+    components::{BackButton, shared::LoadFailed},
+    db::{list_tags, record_key},
+};
 use dioxus::prelude::*;
-use g3_ui::{Button, ButtonStyle, Card, Item, List, Spinner};
+use dioxus_icons::lucide::Tag as TagIcon;
+use g3_cache::use_cached;
+use g3_ui::{Content, ContentWidth, EmptyState, Header, Item, List, ListVariant, Spinner};
 
-/// A pushed page covers the tab bar, so it renders its own shell.
+/// A pushed page: it renders inside `AppShell` but supplies its own header.
 #[component]
 pub fn Tags() -> Element {
-    let app_state = use_context::<AppState>();
+    // Every hook first. Cached on the device: the list shows at once and
+    // refetches behind it, and `DataChange::Tags` marks it stale.
+    let tags = use_cached(list_tags, ());
 
-    // Every hook first. `data_version` is read only to subscribe, so this
-    // refetches after a mutation made on any other screen.
-    let mut tags = use_resource(move || {
-        let _ = (app_state.data_version)();
-        async move { list_tags().await }
-    });
+    let header = rsx! {
+        Header { title: "Tags", start: rsx! { BackButton {} } }
+    };
 
-    let body = match &*tags.read() {
+    // Borrow from the read guard; no clone of the list per render.
+    let tags_read = tags.read();
+    let body = match tags_read.as_ref() {
         None => rsx! { Spinner { center: true } },
-        Some(Err(error)) => rsx! {
-            Card { title: "Could not load your tags",
-                p { class: "g3-message-text g3-message-text-muted", "{error}" }
-                Button { style: ButtonStyle::Outline, onclick: move |_| tags.restart(), "Try again" }
-            }
-        },
+        Some(Err(_)) => rsx! { LoadFailed {} },
         Some(Ok(rows)) if rows.is_empty() => rsx! {
-            Card { title: "No tags yet",
-                p { class: "g3-message-text g3-message-text-muted", "Tags you add show up here." }
+            EmptyState {
+                title: "No tags yet",
+                icon: rsx! { TagIcon { size: 40 } },
+                "Tags you add show up here."
             }
         },
         Some(Ok(rows)) => rsx! {
-            List { inset: true,
-                for tag in rows.clone() {
-                    Item { key: "{record_key(&tag.id)}", label: tag.label }
+            List { variant: ListVariant::Raised,
+                for tag in rows {
+                    Item { key: "{record_key(&tag.id)}", label: tag.label.clone() }
                 }
             }
         },
     };
 
     rsx! {
-        PageShell { title: "Tags", {body} }
+        {header}
+        Content { width: ContentWidth::Readable, {body} }
     }
 }
 ```
 
-The patterns that keep screens out of trouble:
+The patterns that keep screens out of trouble (the full guide is
+[dioxus/patterns.md](dioxus/patterns.md)):
 
-- **Hooks at the top, unconditionally.** A `use_resource` inside a `match` arm
-  panics the first time the arm changes.
-- **Handle all three states:** loading (`Spinner`), error (a `Card` with a retry),
-  and empty (a `Card` saying what will appear). A resource that errors and shows
-  a spinner forever is the most common bug in a new screen.
+- **Hooks at the top, before any early return.** A hook inside a `match` arm
+  or after a `return` panics or goes stale the first time the branch changes.
+- **Handle every state:** loading (`Spinner`), error (`LoadFailed`), empty
+  (an `EmptyState` saying what will appear), then the content.
+- **A prop read inside a hook is a `ReadSignal<T>`**, so the hook reruns when
+  it changes: `fn TagDetail(id: ReadSignal<String>)` with
+  `use_cached(get_tag, (id(),))`. No `use_reactive!`.
 - **Never hold a signal borrow across `.await`.** Read into a local first.
   `clippy.toml` lints for it.
-- **A prop that feeds a resource** needs `use_reactive!`, or the resource keeps
-  using the value it mounted with: `use_resource(use_reactive!(|id| async move { get_tag(id).await }))`.
-- **Navigate with `animated_navigate`**, and go back with `animated_go_back`.
-- **After a mutation**, `app_state.bump_data()`, then `app_state.show_toast(..)`
-  for feedback.
+- **Navigate with `animated_navigate`**, and go back with `BackButton`.
+- **After a mutation**, `app_state.changed(DataChange::Tags)`, then
+  `use_toast()` for feedback. For instant feedback, `update_cached` first,
+  as the notes list does when pinning.
+- **A form's draft lives in its own component**, seeded from props, so typing
+  re-renders only the form (see `NoteForm`).
 
 Wire it up: `mod tag_list; pub use tag_list::*;` in
 `src/components/tags/mod.rs`, `mod tags; pub use tags::*;` in
 `src/components/mod.rs`, and import `Tags` in `src/app.rs`. Link to it from
-Settings with an `Item { kind: ItemKind::Button, onclick: .. }` that calls
-`animated_navigate(Route::Tags {})`.
+Settings with an `Item { label: "Tags", detail: ItemDetail::Show, onclick: move |_| animated_navigate(Route::Tags {}) }`.
 
-## 6. Check it
+## 7. Check it
 
 ```bash
 just check    # web, server, and mobile builds
 just test     # includes the transition and account-deletion tests
-just lint
+just lint-strict
 ```
 
 `just check` matters more than it looks: `cargo check` alone builds only the web
@@ -274,5 +301,6 @@ When you start on your own domain:
    transition tests, and point the tab bar in `AppShell`, the splash, sign-in,
    and `BackButton` fallbacks at your first screen. The compiler lists every
    place.
-3. Remove `DELETE note ..` from `DELETE_ACCOUNT_QUERY`.
+3. Remove `DELETE note ..` from `DELETE_ACCOUNT_QUERY`, and `DataChange::Notes`
+   from `src/data_change.rs`.
 4. Replace `database/seed/00_demo.surql` and `tests/ui/smoke.spec.mjs`.

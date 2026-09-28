@@ -67,11 +67,13 @@ check-mobile:
 lint:
     cargo clippy --all-targets --no-deps
     cargo clippy --all-targets --no-default-features --features server --no-deps
+    cargo clippy --no-default-features --features mobile --no-deps
     npm run lint:web
 
 lint-strict:
     cargo clippy --all-targets --no-deps -- -D warnings
     cargo clippy --all-targets --no-default-features --features server --no-deps -- -D warnings
+    cargo clippy --no-default-features --features mobile --no-deps -- -D warnings
 
 test-rust:
     cargo test

@@ -91,7 +91,7 @@ test("signing in replaces the sign-in screen in history", async ({ page }) => {
   await guest.click();
   await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
 
-  // `Notes` declares `replaces = (Splash, SignIn)`. Had it pushed instead, Back
+  // `Notes` declares `handoff_from = (Splash, SignIn)`. Had it pushed instead, Back
   // from the app would land on a sign-in screen for an account already signed in.
   expect(await page.evaluate(() => history.length)).toBe(lengthOnSignIn);
 });

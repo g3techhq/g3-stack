@@ -12,3 +12,4 @@ extend-exclude = [
 dioxus = "dioxus"
 surreal = "surreal"
 surrealdb = "surrealdb"
+ratatui = "ratatui"

@@ -67,7 +67,7 @@ pub fn AppShell() -> Element {
             RouteTransitionPage {
                 if is_tab {
                     Header { title, toolbar, end }
-                    RouteTransitionBaseRegion {
+                    RouteTransitionBaseRegion { class: "app-route-body",
                         Content { width: ContentWidth::Readable,
                             Outlet::<Route> {}
                         }
