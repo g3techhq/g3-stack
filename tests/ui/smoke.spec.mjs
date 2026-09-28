@@ -41,7 +41,7 @@ async function signIn(page) {
   await expect(guest).toBeVisible();
   await guest.click();
 
-  await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
 }
 
 test("a guest can sign in and work through a note's whole life", async ({ page }) => {
@@ -73,12 +73,12 @@ test("a guest can sign in and work through a note's whole life", async ({ page }
   await page.getByRole("button", { name: "Delete note" }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-  await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByText(TITLE)).toHaveCount(0);
 
   // A reload is a fresh server render and a fresh hydration, signed in.
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   expectCleanHydration();
 });
 
@@ -89,7 +89,7 @@ test("signing in replaces the sign-in screen in history", async ({ page }) => {
   const lengthOnSignIn = await page.evaluate(() => history.length);
 
   await guest.click();
-  await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
 
   // `Notes` declares `handoff_from = (Splash, SignIn)`. Had it pushed instead, Back
   // from the app would land on a sign-in screen for an account already signed in.
@@ -99,16 +99,16 @@ test("signing in replaces the sign-in screen in history", async ({ page }) => {
 test("appearance settings apply without losing the session", async ({ page }) => {
   await signIn(page);
 
-  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 
-  // A g3-ui SegmentButton is a `tab`, not a `button` — one option in a tablist,
-  // which is also how a screen reader announces it.
+  // A g3-ui SegmentButton is a `radio` in a radiogroup, which is also how a
+  // screen reader announces it.
   //
   // Switching mode re-themes the tree in place rather than remounting it, so the
   // tab bar has to survive the switch.
-  await page.getByRole("tab", { name: "Material" }).click();
-  await expect(page.getByRole("tab", { name: "Notes" })).toBeVisible();
+  await page.getByRole("radio", { name: "Material" }).click();
+  await expect(page.getByRole("button", { name: "Notes" })).toBeVisible();
 
   await page.getByRole("switch").click();
 
@@ -116,10 +116,7 @@ test("appearance settings apply without losing the session", async ({ page }) =>
   // to overwrite whatever the user had just picked — a toggle that flips itself
   // back. Waiting past that window and re-asserting is what catches its return.
   await page.waitForTimeout(1500);
-  await expect(page.getByRole("tab", { name: "Material" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(page.getByRole("radio", { name: "Material" })).toBeChecked();
   await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", "true");
 
   // Saved to the account and rendered by the server, so a reload comes back
@@ -132,7 +129,7 @@ test("appearance settings apply without losing the session", async ({ page }) =>
 test("a guest can delete their account", async ({ page }) => {
   await signIn(page);
 
-  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Delete account" }).click();
   await page.getByRole("button", { name: "Delete account" }).last().click();
 
