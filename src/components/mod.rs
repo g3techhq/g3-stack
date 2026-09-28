@@ -9,6 +9,7 @@
 mod auth;
 mod notes;
 mod settings;
+pub mod shared;
 mod shell;
 
 pub use auth::*;

@@ -1,9 +1,16 @@
-use crate::{app::Route, auth::delete_account, db::ColorScheme, state::AppState};
+use crate::{
+    app::Route,
+    auth::{delete_account, sign_out},
+    components::shared::{confirm_destructive, error_message},
+    db::ColorScheme,
+    state::AppState,
+};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{ClipboardCopy, ExternalLink, Share2};
 use g3_ui::{
-    Button, ButtonStyle, Card, ComponentMode, ConfirmModal, Item, ItemKind, List, ListLines,
-    SegmentButton, SegmentGroup, StatusColor, Toggle,
+    Button, ButtonExpand, ButtonFill, Card, Color, ComponentMode, Item, ItemDetail, List,
+    ListLines, ListVariant, SegmentButton, SegmentGroup, Stack, Text, TextTone, Toggle, use_alert,
+    use_toast,
 };
 
 /// Appearance, native-plugin demos, and the account.
@@ -14,119 +21,140 @@ use g3_ui::{
 /// component *and* changes how the next navigation animates.
 #[component]
 pub fn Settings() -> Element {
+    rsx! {
+        Stack {
+            Appearance {}
+            NativePluginDemos {}
+            Account {}
+        }
+    }
+}
+
+/// Split out so a theme change re-renders these controls, not the account
+/// card and the plugin demos beside them.
+#[component]
+fn Appearance() -> Element {
     let mut app_state = use_context::<AppState>();
-    let navigator = use_navigator();
-    let mode = (app_state.mode)();
-    let scheme = (app_state.color_scheme)();
 
-    // `SegmentGroup` and `Toggle` own a `Signal`, so these mirror `AppState`
-    // rather than reading it directly.
-    let mut mode_index = use_signal(|| mode_to_index(mode));
-    let mut dark = use_signal(|| scheme == ColorScheme::Dark);
-    let mut confirm_delete = use_signal(|| false);
-
-    // `use_signal`'s initializer runs once, so a mirror set up before the
-    // stored preference arrived would keep showing the default while the rest
-    // of the app had already switched. These re-sync it when `AppState`
-    // changes for a reason other than this screen's own controls.
-    use_effect(use_reactive!(|mode| mode_index.set(mode_to_index(mode))));
-    use_effect(use_reactive!(|scheme| dark.set(scheme == ColorScheme::Dark)));
-
-    let handle = app_state
-        .user
-        .read()
-        .as_ref()
-        .map(|user| user.handle.clone())
-        .unwrap_or_default();
+    // `SegmentGroup` and `Toggle` own a `Signal`, so these mirror `AppState`.
+    // Each effect reads the state it follows, so it reruns when that changes
+    // for a reason other than this screen's own controls, such as the stored
+    // preference arriving after the mirror was set up.
+    let mut mode = use_signal(|| *app_state.mode.peek());
+    let mut dark = use_signal(|| *app_state.color_scheme.peek() == ColorScheme::Dark);
+    use_effect(move || mode.set((app_state.mode)()));
+    use_effect(move || dark.set((app_state.color_scheme)() == ColorScheme::Dark));
 
     rsx! {
         Card { title: "Appearance",
-            p { class: "g3-message-text g3-message-text-muted",
+            Text { tone: TextTone::Secondary,
                 "iOS and Material are Ionic's two modes. Switching restyles every component "
                 "and changes how the next screen animates in."
             }
             SegmentGroup {
-                active: mode_index,
-                on_change: move |index: usize| {
-                    app_state.set_appearance(index_to_mode(index), (app_state.color_scheme)());
+                value: mode,
+                aria_label: "Platform style",
+                defer_selection: true,
+                onchange: move |mode: ComponentMode| {
+                    let scheme = *app_state.color_scheme.peek();
+                    app_state.set_appearance(mode, scheme);
                 },
-                SegmentButton { index: 0, "iOS" }
-                SegmentButton { index: 1, "Material" }
+                SegmentButton { value: ComponentMode::Ios, "iOS" }
+                SegmentButton { value: ComponentMode::Md, "Material" }
             }
-            List { inset: true, lines: ListLines::None,
+            List { variant: ListVariant::Raised, lines: ListLines::None,
                 Item {
                     label: "Dark mode",
                     end: rsx! {
                         Toggle {
                             checked: dark,
+                            aria_label: "Dark mode",
                             onchange: move |on: bool| {
                                 let scheme = if on { ColorScheme::Dark } else { ColorScheme::Light };
-                                app_state.set_appearance((app_state.mode)(), scheme);
+                                let mode = *app_state.mode.peek();
+                                app_state.set_appearance(mode, scheme);
                             },
                         }
                     },
                 }
             }
         }
+    }
+}
 
-        NativePluginDemos {}
+#[component]
+fn Account() -> Element {
+    let mut app_state = use_context::<AppState>();
+    let navigator = use_navigator();
+    let toast = use_toast();
+    let alerts = use_alert();
 
+    let sign_out_clicked = move |_| async move {
+        if !confirm_destructive(
+            alerts,
+            "Sign out?",
+            "This guest account and its notes will not be recoverable.",
+            "Sign out",
+        )
+        .await
+        {
+            return;
+        }
+        let _ = sign_out().await;
+        // Clearing `user` before navigating, so no screen renders for a
+        // frame against an account the server has already forgotten. The
+        // splash then re-asks and routes onward.
+        app_state.user.set(None);
+        navigator.push(Route::Splash {});
+    };
+
+    let delete_clicked = move |_| async move {
+        if !confirm_destructive(
+            alerts,
+            "Delete your account?",
+            "Your account and every note in it are removed for good. This cannot be undone.",
+            "Delete account",
+        )
+        .await
+        {
+            return;
+        }
+        match delete_account().await {
+            Ok(()) => {
+                app_state.user.set(None);
+                toast.show("Account deleted.");
+                // `replace`: the page this entry points at belonged to an
+                // account that no longer exists.
+                navigator.replace(Route::Splash {});
+            }
+            Err(error) => {
+                toast.error(format!("Could not delete the account: {}", error_message(&error)));
+            }
+        }
+    };
+
+    let user = app_state.user.read();
+    let handle = user.as_ref().map(|user| user.handle.as_str()).unwrap_or_default();
+
+    rsx! {
         Card { title: "Account",
-            List { inset: true, lines: ListLines::Inset,
+            List { variant: ListVariant::Raised, lines: ListLines::Inset,
                 Item { label: "Signed in as", metadata: handle }
                 Item {
-                    kind: ItemKind::Button,
                     label: "Sign out",
-                    onclick: move |_| app_state.sign_out_confirm_open.set(true),
+                    detail: ItemDetail::Hide,
+                    onclick: sign_out_clicked,
                 }
             }
         }
 
         Button {
-            style: ButtonStyle::Danger,
-            expand: true,
-            onclick: move |_| confirm_delete.set(true),
+            fill: ButtonFill::Outline,
+            color: Color::Danger,
+            expand: ButtonExpand::Block,
+            onclick: delete_clicked,
             "Delete account"
         }
-
-        ConfirmModal {
-            open: confirm_delete,
-            title: "Delete your account?",
-            description: rsx! { "Your account and every note in it are removed for good. This cannot be undone." },
-            confirm_text: "Delete account",
-            on_confirm: move |_| {
-                spawn(async move {
-                    match delete_account().await {
-                        Ok(()) => {
-                            app_state.user.set(None);
-                            app_state.show_toast("Account deleted.", StatusColor::Neutral);
-                            // `replace`: the page this entry points at belonged
-                            // to an account that no longer exists.
-                            navigator.replace(Route::Splash {});
-                        }
-                        Err(error) => app_state.show_toast(
-                            format!("Could not delete the account: {error}"),
-                            StatusColor::Danger,
-                        ),
-                    }
-                });
-            },
-        }
-    }
-}
-
-fn mode_to_index(mode: ComponentMode) -> usize {
-    match mode {
-        ComponentMode::Ios => 0,
-        ComponentMode::Md => 1,
-    }
-}
-
-fn index_to_mode(index: usize) -> ComponentMode {
-    if index == 1 {
-        ComponentMode::Md
-    } else {
-        ComponentMode::Ios
     }
 }
 
@@ -151,7 +179,7 @@ fn NativePluginDemos() -> Element {
         target_os = "android",
         target_os = "ios"
     ))]
-    let mut app_state = use_context::<AppState>();
+    let toast = use_toast();
 
     #[cfg(any(
         all(feature = "web", target_arch = "wasm32"),
@@ -162,57 +190,46 @@ fn NativePluginDemos() -> Element {
 
     rsx! {
         Card { title: "Native plugins",
-            p { class: "g3-message-text g3-message-text-muted",
-                "The same calls on web, Android, and iOS."
-            }
-            List { inset: true, lines: ListLines::Inset,
+            Text { tone: TextTone::Secondary, "The same calls on web, Android, and iOS." }
+            List { variant: ListVariant::Raised, lines: ListLines::Inset,
                 Item {
-                    kind: ItemKind::Button,
                     start: rsx! { ClipboardCopy { size: 20 } },
                     label: "Copy text",
                     description: "To the system clipboard",
+                    detail: ItemDetail::Hide,
                     onclick: move |_| {
                         cfg_if::cfg_if! { if #[cfg(any(all(feature = "web", target_arch = "wasm32"), target_os = "android", target_os = "ios"))] {
                             match plugins.clipboard.write().copy_to_clipboard("Sent from the g3 stack".to_string()) {
-                                Ok(()) => app_state.show_toast("Copied to clipboard.", StatusColor::Success),
-                                Err(error) => app_state.show_toast(
-                                    format!("Clipboard unavailable: {error}"),
-                                    StatusColor::Warning,
-                                ),
+                                Ok(()) => { toast.success("Copied to clipboard."); }
+                                Err(error) => { toast.error(format!("Clipboard unavailable: {error}")); }
                             }
                         }}
                     },
                 }
                 Item {
-                    kind: ItemKind::Button,
                     start: rsx! { Share2 { size: 20 } },
                     label: "Share",
                     description: "Opens the share sheet",
+                    detail: ItemDetail::Hide,
                     onclick: move |_| {
                         cfg_if::cfg_if! { if #[cfg(any(all(feature = "web", target_arch = "wasm32"), target_os = "android", target_os = "ios"))] {
                             // Browsers without Web Share return an error rather
                             // than doing nothing, so the app can say so.
                             if let Err(error) = plugins.clipboard.write().share("Built on the g3 stack".to_string()) {
-                                app_state.show_toast(
-                                    format!("Sharing unavailable here: {error}"),
-                                    StatusColor::Warning,
-                                );
+                                toast.error(format!("Sharing unavailable here: {error}"));
                             }
                         }}
                     },
                 }
                 Item {
-                    kind: ItemKind::Button,
                     start: rsx! { ExternalLink { size: 20 } },
                     label: "Open the Dioxus docs",
                     description: "In the system browser",
+                    detail: ItemDetail::Hide,
                     onclick: move |_| {
                         cfg_if::cfg_if! { if #[cfg(any(all(feature = "web", target_arch = "wasm32"), target_os = "android", target_os = "ios"))] {
                             if let Err(error) = plugins.external_url.write().open("https://dioxuslabs.com/learn/0.7/") {
-                                app_state.show_toast(
-                                    format!("Could not open the browser: {error}"),
-                                    StatusColor::Warning,
-                                );
+                                toast.error(format!("Could not open the browser: {error}"));
                             }
                         }}
                     },

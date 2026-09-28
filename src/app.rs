@@ -7,7 +7,7 @@
 
 use crate::{
     components::{
-        AppOverlays, AppShell, EditNote, NewNote, NoteDetail, Notes, Settings, SignIn, Splash,
+        AppShell, EditNote, NewNote, NoteDetail, Notes, Settings, SheetShell, SignIn, Splash,
     },
     db::ColorScheme,
     state::{AppState, AppStateProvider},
@@ -15,9 +15,9 @@ use crate::{
 use dioxus::prelude::*;
 use g3_auth::PublicRoutes;
 use g3_native_plugins::NativePluginsProvider;
-#[cfg(test)]
-use g3_route_transitions::{NavigationAnimation, RouteTransitions};
-use g3_route_transitions::{RouteTransitionPage, route_transitions, use_native_back_navigation};
+use g3_route_transitions::{
+    RouteTransitions, use_browser_history_transitions, use_native_back_navigation,
+};
 use g3_ui::{AppWrapper, Theme};
 use strum_macros::{Display, EnumString};
 
@@ -46,60 +46,35 @@ pub enum NotesFilter {
     Pinned,
 }
 
-impl NotesFilter {
-    pub fn segment_index(&self) -> usize {
-        match self {
-            NotesFilter::All => 0,
-            NotesFilter::Pinned => 1,
-        }
-    }
-
-    pub fn from_segment_index(index: usize) -> Self {
-        match index {
-            1 => NotesFilter::Pinned,
-            _ => NotesFilter::All,
-        }
-    }
-}
-
 /// The route table.
 ///
-/// `#[route_transitions]` reads the `#[transition(..)]` attributes below and
-/// generates the metadata `animated_navigate` uses to pick an animation. The
-/// vocabulary:
+/// `#[derive(RouteTransitions)]` reads the `#[transition(..)]` attributes
+/// below, and `animated_navigate` picks each animation from them. The layers:
 ///
-/// - `root` — a stable destination, i.e. a bottom tab. Root-to-root fades.
-/// - `pushed` — a full-screen page above a root. In pushes left, back pushes
-///   right (with iOS parallax or Material shared-axis, per platform).
-/// - `cover` — a sheet or modal. Rises from the bottom, dismisses downward.
-/// - `morph` — a page that grows out of a card on the route before it.
-/// - `base` — an ordinary page. The default; you rarely write it.
+/// - `layer = stack_root`: a tab. Tab to tab cross-fades.
+/// - `layer = stack_page`: a page pushed above a tab. It slides in, and Back
+///   slides it out, in the platform's own motion.
+/// - `layer = sheet`: rises from the bottom and dismisses downward.
+/// - no layer: an ordinary page, which cross-fades.
 ///
-/// And the modifiers:
+/// And the options:
 ///
-/// - `replace` makes a change *within* the same variant skip the animation
-///   and replace history instead of pushing it. That is what stops a
-///   segmented filter from cross-fading the whole page on every tap, and
-///   stops back from walking through every filter the user tried.
-///   `replace(key = id)` narrows it to changes where the identity fields
-///   match.
-/// - `replaces = Route` (or a tuple) hands the listed route off to this one:
-///   arriving from it replaces its history entry. Used below so Back never
-///   lands on the splash or the sign-in screen, both of which would
-///   immediately send you forward again.
-/// - `forward = Route` (or a tuple) declares a drill-down, so
-///   pushed-to-pushed navigation knows which direction it is going. It
-///   overrides the destination's own kind, so never point it at a `cover`
-///   route — the sheet would slide in from the side instead of rising.
-/// - `push(group = name, order = field)` orders peer routes, such as the
-///   steps of a wizard, so moving between them slides the right way.
+/// - `history = replace` makes a move *within* the same variant instant, and
+///   replaces the history entry instead of pushing one. That is what stops a
+///   filter from cross-fading the page on every tap, and Back from walking
+///   through every filter the user tried.
+/// - `handoff_from = Route` (or a tuple): arriving from the listed route
+///   replaces its history entry, so Back never lands on the splash or the
+///   sign-in screen, both of which would send you straight forward again.
+/// - `forward_to = Route` (or a tuple) declares a drill-down between two
+///   pushed pages, so the push runs the right way. Not needed from a tab or
+///   to a sheet: the layers already say which way those go.
 ///
-/// Anything with no more specific match falls back to `Fade`.
+/// The full rule table is in docs/navigation.md.
 ///
 /// `#[public]` marks the pages a signed-out visitor may load (see
 /// `auth::session`); a signed-out load of any other page goes to the splash.
-#[route_transitions]
-#[derive(Debug, Clone, Routable, PartialEq, PublicRoutes)]
+#[derive(Debug, Clone, Routable, PartialEq, RouteTransitions, PublicRoutes)]
 #[rustfmt::skip]
 pub enum Route {
     // The splash owns `/`, and every unknown path lands there too. It is where
@@ -113,39 +88,42 @@ pub enum Route {
         #[route("/")]
         Splash {},
 
-        #[transition(replaces = Splash)]
+        #[transition(handoff_from = Splash)]
         #[public]
         #[route("/signin")]
         SignIn {},
 
         #[layout(AppShell)]
-            #[transition(root, replace, replaces = (Splash, SignIn))]
+            #[transition(layer = stack_root, history = replace, handoff_from = (Splash, SignIn))]
             #[route("/notes?:filter")]
             Notes { filter: Option<NotesFilter> },
 
-            #[transition(root)]
+            #[transition(layer = stack_root)]
             #[route("/settings")]
             Settings {},
         #[end_layout]
 
-        // Sheets. Reachable from both the list and the detail page, so they
-        // sit outside the tab shell rather than inside either one.
-        #[transition(cover)]
-        #[route("/notes/new")]
-        NewNote {},
-        #[transition(cover)]
-        #[route("/notes/:id/edit")]
-        EditNote { id: String },
+        // Sheets rise beside the desktop rail rather than over it, so they get
+        // a layout that renders the same rail (hidden on phones). Reachable
+        // from both the list and the detail page, so they belong to neither.
+        #[layout(SheetShell)]
+            #[transition(layer = sheet)]
+            #[route("/notes/new")]
+            NewNote {},
 
+            #[transition(layer = sheet)]
+            #[route("/notes/:id/edit")]
+            EditNote { id: String },
+        #[end_layout]
+
+        // Pushed pages reuse the tab shell, so the navigation stays put while
+        // only the page slides. The page supplies its own header.
+        //
         // No `#[end_layout]` after this one, or after `RootLayout`: a layout
-        // opened and never closed simply runs to the end of the enum, and the
-        // macro rejects a trailing close with nothing after it.
-        #[layout(PushedPageLayout)]
-            // Deliberately no `forward = EditNote`. `forward` declares a
-            // drill-down *push*, and it wins over the destination's own kind —
-            // naming a `cover` route there makes the sheet slide in from the
-            // side instead of rising. Reserve it for pushed-to-pushed.
-            #[transition(pushed)]
+        // opened and never closed runs to the end of the enum, and the macro
+        // rejects a trailing close with nothing after it.
+        #[layout(AppShell)]
+            #[transition(layer = stack_page)]
             #[route("/notes/:id")]
             NoteDetail { id: String },
 }
@@ -154,12 +132,6 @@ pub enum Route {
 /// once, inside the router's context. That is what connects Android's system
 /// Back button and iOS's left-edge swipe to the same animated pop the app's
 /// own back button performs.
-///
-/// Also where the app-wide overlays are mounted. They have to be *inside* the
-/// router — `AppOverlays` navigates on sign-out, and `use_navigator` panics
-/// outside a `Router` descendant — while still sitting above every route, so
-/// their backdrops are not clipped by a screen's scroll container and a toast
-/// raised just before a navigation survives it.
 ///
 /// Deliberately does no auth work. The signed-out decision lives in
 /// `Route::Splash` — one place that asks the server once. A guard here would
@@ -171,35 +143,20 @@ fn RootLayout() -> Element {
 
     rsx! {
         Outlet::<Route> {}
-        AppOverlays {}
-    }
-}
-
-/// Gives pushed routes one stable, viewport-sized snapshot.
-///
-/// Without it, a page whose header, body, and tab bar are separately marked
-/// produces three independent snapshots that can slide over each other, or
-/// expose the WebView's background between them.
-#[component]
-fn PushedPageLayout() -> Element {
-    rsx! {
-        RouteTransitionPage {
-            Outlet::<Route> {}
-        }
     }
 }
 
 /// Your brand, in one function.
 ///
 /// `Theme`'s fields are all public, so a whole custom palette is struct-update
-/// syntax over a preset. `with_focused` alone changes the accent that tints
+/// syntax over a preset. `with_accent` alone changes the color that tints
 /// focus rings, selected segments, active toggles, and links — which is most
 /// of what makes an app look like itself. docs/styling.md walks through a full
 /// palette.
 pub fn app_theme(scheme: ColorScheme) -> Theme {
     match scheme {
-        ColorScheme::Light => Theme::default_light().with_focused("#2563eb"),
-        ColorScheme::Dark => Theme::default_dark().with_focused("#3b82f6"),
+        ColorScheme::Light => Theme::default_light().with_accent("#2563eb"),
+        ColorScheme::Dark => Theme::default_dark().with_accent("#3b82f6"),
     }
 }
 
@@ -229,6 +186,8 @@ fn ThemedShell() -> Element {
     let app_state = use_context::<AppState>();
     let mode = (app_state.mode)();
     let color_scheme = (app_state.color_scheme)();
+    // The browser's own Back and Forward buttons animate like the app's.
+    use_browser_history_transitions::<Route>();
 
     rsx! {
         // Here, below `AppStateProvider`, rather than beside it in `App`.
@@ -243,7 +202,7 @@ fn ThemedShell() -> Element {
         document::Link { rel: "icon", r#type: "image/svg+xml", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
 
-        // Works around g3-ui 0.3.0. `AppWrapper` links its stylesheet at
+        // Works around g3-ui 0.4.2. `AppWrapper` links its stylesheet at
         // runtime on every non-wasm target, which includes the *server* build,
         // but not in the web client. The server therefore writes one more
         // head element to the hydration stream than the client reads, and
@@ -251,17 +210,19 @@ fn ThemedShell() -> Element {
         // (logged as "Error deserializing data ... CapturedError"). Rendering
         // the same link here on the web client, in the same position, evens
         // the count. The browser already has the file, so it costs nothing.
-        // Delete this once g3-ui gates that link to match.
+        // Delete this once a g3-ui release gates that link to match.
         if cfg!(target_arch = "wasm32") {
             document::Link { rel: "stylesheet", href: g3_ui::UI_CSS }
         }
 
-        AppWrapper { theme: app_theme(color_scheme), mode, disable_text_selection: true,
-            // Mounted unconditionally. The provider itself renders nothing but
-            // its children, and only installs the plugin context on targets
-            // that have one, so the tree is the same shape everywhere — which
-            // is what hydration needs.
-            NativePluginsProvider {
+        // Mounted unconditionally. The provider renders nothing but its
+        // children, and only installs the plugin context on targets that have
+        // one, so the tree is the same shape everywhere — which is what
+        // hydration needs.
+        NativePluginsProvider {
+            // `AppWrapper` also hosts the toasts and alerts that `use_toast`
+            // and `use_alert` open, above every screen.
+            AppWrapper { theme: app_theme(color_scheme), mode, text_selection: false,
                 Router::<Route> {}
             }
         }
@@ -275,6 +236,7 @@ fn ThemedShell() -> Element {
 #[cfg(test)]
 mod transition_tests {
     use super::*;
+    use g3_route_transitions::NavigationTransition;
 
     fn notes() -> Route {
         Route::Notes { filter: None }
@@ -288,11 +250,11 @@ mod transition_tests {
 
     #[test]
     fn tabs_cross_fade_rather_than_sliding() {
-        // Peer roots have no spatial relationship, so sliding between them
+        // Peer tabs have no spatial relationship, so sliding between them
         // would imply a hierarchy that does not exist.
         assert_eq!(
             notes().transition_to(&Route::Settings {}),
-            NavigationAnimation::Fade
+            NavigationTransition::CrossFade
         );
         assert!(!notes().replaces_history(&Route::Settings {}));
     }
@@ -303,7 +265,7 @@ mod transition_tests {
             filter: Some(NotesFilter::Pinned),
         };
 
-        assert_eq!(notes().transition_to(&pinned), NavigationAnimation::None);
+        assert_eq!(notes().transition_to(&pinned), NavigationTransition::None);
         assert!(notes().replaces_history(&pinned));
     }
 
@@ -311,11 +273,11 @@ mod transition_tests {
     fn opening_a_note_pushes_and_back_reverses_it() {
         assert_eq!(
             notes().transition_to(&detail()),
-            NavigationAnimation::PushLeft
+            NavigationTransition::Forward
         );
         assert_eq!(
             detail().transition_to(&notes()),
-            NavigationAnimation::PushRight
+            NavigationTransition::Backward
         );
     }
 
@@ -327,22 +289,22 @@ mod transition_tests {
 
         assert_eq!(
             detail().transition_to(&editor),
-            NavigationAnimation::CoverUp
+            NavigationTransition::PresentSheet
         );
         assert_eq!(
             editor.transition_to(&detail()),
-            NavigationAnimation::UncoverDown
+            NavigationTransition::DismissSheet
         );
         // Back out of a sheet dismisses downward even when there is no
         // recorded history to pop to.
-        assert_eq!(editor.transition_back(), NavigationAnimation::UncoverDown);
+        assert_eq!(editor.transition_back(), NavigationTransition::DismissSheet);
     }
 
     #[test]
     fn the_new_note_sheet_covers_the_list() {
         assert_eq!(
             notes().transition_to(&Route::NewNote {}),
-            NavigationAnimation::CoverUp
+            NavigationTransition::PresentSheet
         );
     }
 

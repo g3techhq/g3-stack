@@ -4,12 +4,14 @@
 //! cross-cutting state belongs here.** A filter, a selected tab, a search
 //! term — those go in the route (see `Route` in `app.rs`), so they survive a
 //! refresh, work with browser back, and can be linked to. `AppState` is only
-//! for things genuinely shared across screens: who is signed in, what the
-//! theme is, and the overlays any screen can raise.
+//! for things genuinely shared across screens: who is signed in and what the
+//! theme is. Toasts and alerts need nothing here: `use_toast` and
+//! `use_alert` open them in the host `AppWrapper` provides.
 
+use crate::data_change::DataChange;
 use crate::db::{AppearanceMode, ColorScheme, User, get_current_user, update_appearance};
 use dioxus::prelude::*;
-use g3_ui::{ComponentMode, StatusColor};
+use g3_ui::ComponentMode;
 
 /// Every field is a `Signal`, which is `Copy`, so `AppState` itself is `Copy`
 /// — it can be captured into `move` closures and nested `spawn(async move
@@ -22,51 +24,31 @@ pub struct AppState {
     pub mode: Signal<ComponentMode>,
     pub color_scheme: Signal<ColorScheme>,
 
-    /// The toast every screen shares. One instance is mounted in
-    /// `AppOverlays`; screens call `show_toast` rather than each rendering
-    /// their own, so a toast raised just before a navigation survives it.
-    pub toast_open: Signal<bool>,
-    pub toast: Signal<(String, StatusColor)>,
-
-    pub sign_out_confirm_open: Signal<bool>,
-
-    /// Bumped after any mutation (see [`AppState::bump_data`]). A screen
-    /// still on `use_resource` reads this in its closure, purely to pick up
-    /// the dependency, so it refetches when it moves.
+    /// Bumped after every mutation (see [`AppState::changed`]). A read that
+    /// changes per keystroke, and so stays on `use_resource` rather than
+    /// `use_cached`, reads this in its closure purely to pick up the
+    /// dependency, so it refetches after a mutation made elsewhere.
     pub data_version: Signal<u64>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
+impl AppState {
+    /// Built inside `use_context_provider`'s initializer, so the signals
+    /// belong to the provider's scope and live as long as it does.
+    fn new() -> Self {
         Self {
             user: Signal::new(None),
             mode: Signal::new(ComponentMode::Ios),
             color_scheme: Signal::new(ColorScheme::Light),
-            toast_open: Signal::new(false),
-            toast: Signal::new((String::new(), StatusColor::Neutral)),
-            sign_out_confirm_open: Signal::new(false),
             data_version: Signal::new(0),
         }
     }
-}
 
-impl AppState {
-    pub fn show_toast(&mut self, message: impl Into<String>, color: StatusColor) {
-        self.toast.set((message.into(), color));
-        self.toast_open.set(true);
-    }
-
-    /// Call after any mutation: marks every cached read stale, so mounted
-    /// screens refetch while still showing what they had.
-    ///
-    /// A deliberately blunt instrument. It refetches more than strictly
-    /// necessary, and that is the trade: marking only the reads a change can
-    /// affect (`g3_cache::invalidate_cached(list_notes)`) is a map from every
-    /// mutation to every read, which is easy to get subtly wrong. Reach for
-    /// it when a screen is measurably too slow, not before.
-    pub fn bump_data(&mut self) {
+    /// Call after a mutation succeeds, saying what it changed: marks the
+    /// cached reads that can see it stale (see [`crate::data_change`]), so
+    /// mounted screens refetch while still showing what they had.
+    pub fn changed(&mut self, change: DataChange) {
         self.data_version += 1;
-        g3_cache::invalidate_all_cached();
+        crate::data_change::invalidate(change);
     }
 
     /// Makes `user` the signed-in account and adopts its saved appearance.
@@ -124,7 +106,7 @@ pub fn apply_mode(mode: ComponentMode) {
     g3_ui::set_mode(mode);
     g3_route_transitions::set_platform(match mode {
         ComponentMode::Ios => g3_route_transitions::Platform::Ios,
-        ComponentMode::Md => g3_route_transitions::Platform::Md,
+        ComponentMode::Md => g3_route_transitions::Platform::Material,
     });
 }
 
@@ -133,7 +115,7 @@ pub fn apply_mode(mode: ComponentMode) {
 /// Mounted above the `Router` so the state outlives navigation.
 #[component]
 pub fn AppStateProvider(children: Element) -> Element {
-    let mut app_state = use_context_provider(AppState::default);
+    let mut app_state = use_context_provider(AppState::new);
 
     // `peek`, not a tracked read. This component writes `mode` below, and
     // subscribing to it here would make that write re-render this very
@@ -162,14 +144,17 @@ pub fn AppStateProvider(children: Element) -> Element {
     // than a `401`.
     let current_user = use_server_future(get_current_user)?;
 
-    // Runs once per answer, not once per render: nothing else this component
-    // reads changes. That matters, because re-applying the stored appearance
-    // after the user had already toggled it would read as a switch that flips
-    // itself back.
-    if let Some(Ok(Some(user))) = current_user.read().clone()
-        && app_state.user.peek().as_ref() != Some(&user)
+    // The one signal written during render in this template, on purpose.
+    // Effects never run during SSR, so an effect here would render the
+    // server's HTML in the default theme and the saved one would flash in
+    // after hydration. It is safe because it is guarded: it writes only when
+    // the answer differs from what is applied, so it runs once per answer and
+    // the re-render it causes writes nothing. Anywhere else, a signal write
+    // belongs in an event handler or an effect (see docs/dioxus/patterns.md).
+    if let Some(Ok(Some(user))) = &*current_user.read()
+        && app_state.user.peek().as_ref() != Some(user)
     {
-        app_state.apply_user(user);
+        app_state.apply_user(user.clone());
     }
 
     rsx! {

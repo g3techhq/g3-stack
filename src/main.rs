@@ -1,6 +1,7 @@
 mod app;
 mod auth;
 mod components;
+mod data_change;
 mod db;
 #[cfg(feature = "server")]
 mod health;

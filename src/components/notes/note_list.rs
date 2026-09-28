@@ -1,98 +1,137 @@
 use crate::{
     app::{NotesFilter, Route},
-    db::{list_notes, record_key, relative_time, set_note_pinned},
+    components::shared::{LoadFailed, error_message, peek_row},
+    data_change::DataChange,
+    db::{Note, list_notes, record_key, relative_time, set_note_pinned},
     state::AppState,
 };
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{Pin, PinOff};
+use dioxus_icons::lucide::{NotebookPen, Pin, PinOff};
+use g3_cache::{update_cached, use_cached};
 use g3_route_transitions::animated_navigate;
 use g3_ui::{
-    Button, ButtonStyle, Card, Item, ItemDetail, List, ListLines, Refresher, SegmentButton,
-    SegmentGroup, Spinner, StatusColor, SwipeAction, SwipeItem, SwipeSide,
+    Button, ButtonFill, Color, EmptyState, Item, ItemDetail, List, ListLines, ListVariant,
+    Refresher, SegmentButton, SegmentGroup, Spinner, SwipeAction, SwipeItem, use_toast,
 };
 
 /// The All/Pinned segmented control in the shell's header.
 ///
 /// Lives here rather than in `AppShell` because it belongs to this screen —
 /// the shell just renders whatever toolbar the current route asks for.
+///
+/// The filter is the route's, so the group only reports a pick
+/// (`defer_selection`) and follows the route back, rather than keeping a copy
+/// of its own that could disagree with the URL. The effect is what moves it
+/// on browser Back: `filter` is a `ReadSignal`, so reading it inside the
+/// effect subscribes, and the effect reruns when the parent passes a new
+/// value.
 #[component]
-pub fn NotesToolbar(filter: NotesFilter, on_change: Callback<NotesFilter>) -> Element {
-    let mut active = use_signal(|| filter.segment_index());
-
-    // Syncs the indicator when `filter` changes for a reason other than this
-    // toolbar's own `on_change` — browser back/forward, or a navigation from
-    // elsewhere. A `key` on the component would also work but forces a
-    // remount, and a remounted SegmentGroup starts already in its new
-    // position instead of sliding to it.
-    use_effect(use_reactive!(|filter| {
-        active.set(filter.segment_index());
-    }));
+pub fn NotesToolbar(filter: ReadSignal<NotesFilter>, on_change: Callback<NotesFilter>) -> Element {
+    let mut selected = use_signal(|| *filter.peek());
+    use_effect(move || selected.set(filter()));
 
     rsx! {
         SegmentGroup {
-            active,
-            on_change: move |index| on_change.call(NotesFilter::from_segment_index(index)),
-            SegmentButton { index: 0, "All" }
-            SegmentButton { index: 1, "Pinned" }
+            value: selected,
+            aria_label: "Filter notes",
+            defer_selection: true,
+            onchange: move |filter| on_change.call(filter),
+            SegmentButton { value: NotesFilter::All, "All" }
+            SegmentButton { value: NotesFilter::Pinned, "Pinned" }
         }
     }
 }
 
 /// The list screen.
+///
+/// `filter` is a `ReadSignal` because the memo below reads it, so the list
+/// reshapes when the route's filter changes without the screen remounting.
 #[component]
-pub fn Notes(filter: Option<NotesFilter>) -> Element {
-    let filter = filter.unwrap_or_default();
+pub fn Notes(filter: ReadSignal<Option<NotesFilter>>) -> Element {
     let mut app_state = use_context::<AppState>();
+    let toast = use_toast();
 
-    // `data_version` is read inside the closure purely to register the
-    // dependency, so this refetches after a mutation made from any other
-    // screen. Without it, saving a note in the editor and coming back here
-    // would show the list as it was before the save.
-    let mut notes = use_resource(move || {
-        let _ = (app_state.data_version)();
-        async move { list_notes().await }
+    // Cached on the device: reopening the app shows the last list at once and
+    // refetches behind it. `app_state.changed(DataChange::Notes)` after any
+    // edit marks it stale (see `src/data_change.rs`).
+    let notes = use_cached(list_notes, ());
+
+    // Which rows the filter keeps, as indices into the cached list. Rerun
+    // when the list or the filter changes, not on every render, and it copies
+    // no note: the rows below borrow them from the cache.
+    let shown = use_memo(move || {
+        let pinned_only = filter().unwrap_or_default() == NotesFilter::Pinned;
+        match &*notes.read() {
+            Some(Ok(all)) => all
+                .iter()
+                .enumerate()
+                .filter(|(_, note)| !pinned_only || note.pinned)
+                .map(|(index, _)| index)
+                .collect(),
+            _ => Vec::new(),
+        }
     });
 
+    // Rows capture only their index (a `usize`, which is `Copy`) and look up
+    // the note when tapped, instead of cloning an id into two closures per
+    // row on every render.
+    let open = move |index: usize| {
+        if let Some(id) = peek_row(&notes, index, |note: &Note| record_key(&note.id)) {
+            spawn(animated_navigate(Route::NoteDetail { id }));
+        }
+    };
+
+    let toggle_pin = move |index: usize| {
+        let Some((id, pinned)) = peek_row(&notes, index, |note: &Note| {
+            (record_key(&note.id), !note.pinned)
+        }) else {
+            return;
+        };
+        // Instant feedback: edit the cached list, then ask the server, then
+        // reconcile. The refetch `changed` starts replaces the guess with what
+        // the server holds, which also undoes it if the save failed.
+        update_cached(list_notes, (), |notes: &mut Vec<Note>| {
+            if let Some(note) = notes.get_mut(index) {
+                note.pinned = pinned;
+            }
+        });
+        spawn(async move {
+            // "Set to", not "toggle": a device showing a stale list cannot
+            // undo a change another device made.
+            if let Err(error) = set_note_pinned(id, pinned).await {
+                toast.error(format!("Could not update the note: {}", error_message(&error)));
+            }
+            app_state.changed(DataChange::Notes);
+        });
+    };
+
     // Hooks are all above this line. Everything below branches, and a hook
-    // called inside a branch panics the first time the branch changes.
+    // called after an early return runs on some renders and not others.
     let notes_read = notes.read();
     let all = match notes_read.as_ref() {
         None => return rsx! { Spinner { center: true } },
-        Some(Err(error)) => {
-            return rsx! {
-                Card { title: "Could not load your notes",
-                    p { class: "g3-message-text g3-message-text-muted", "{error}" }
-                    Button { style: ButtonStyle::Outline, onclick: move |_| notes.restart(), "Try again" }
-                }
-            };
-        }
+        Some(Err(_)) => return rsx! { LoadFailed {} },
         Some(Ok(all)) => all,
     };
 
-    // Filtering client-side is fine at this size and keeps one query serving
-    // both segments. Push it into the SurrealQL `WHERE` clause when the list
-    // outgrows a single fetch.
-    let rows: Vec<_> = all
-        .iter()
-        .filter(|note| filter != NotesFilter::Pinned || note.pinned)
-        .cloned()
-        .collect();
-    drop(notes_read);
-
-    if rows.is_empty() {
-        let (title, body) = match filter {
-            NotesFilter::Pinned => ("No pinned notes", "Swipe a note to the right to pin it."),
-            NotesFilter::All => ("No notes yet", "Notes you write show up here."),
-        };
+    if shown.read().is_empty() {
+        let pinned_only = filter().unwrap_or_default() == NotesFilter::Pinned;
+        let title = if pinned_only { "No pinned notes" } else { "No notes yet" };
         return rsx! {
-            Card { title,
-                p { class: "g3-message-text g3-message-text-muted", "{body}" }
-                Button {
-                    style: ButtonStyle::Outline,
-                    onclick: move |_| {
-                        spawn(animated_navigate(Route::NewNote {}));
-                    },
-                    "Write a note"
+            EmptyState {
+                title,
+                icon: rsx! { NotebookPen { size: 40 } },
+                action: rsx! {
+                    Button {
+                        fill: ButtonFill::Outline,
+                        onclick: move |_| animated_navigate(Route::NewNote {}),
+                        "Write a note"
+                    }
+                },
+                if pinned_only {
+                    "Swipe a note to the right to pin it."
+                } else {
+                    "Notes you write show up here."
                 }
             }
         };
@@ -101,50 +140,33 @@ pub fn Notes(filter: Option<NotesFilter>) -> Element {
     rsx! {
         Refresher {
             refreshing: notes.pending(),
-            on_refresh: move |_| notes.restart(),
-            List { inset: true, lines: ListLines::Inset,
-                for note in rows {
+            on_refresh: move |_| notes.refresh(),
+            List { variant: ListVariant::Raised, lines: ListLines::Inset,
+                for &index in shown.read().iter() {
                     {
-                        let id = record_key(&note.id);
-                        let pinned = note.pinned;
-                        let open_id = id.clone();
-                        let toggle_id = id.clone();
+                        let note = &all[index];
                         rsx! {
                             SwipeItem {
-                                key: "{id}",
+                                key: "{record_key(&note.id)}",
                                 start_actions: rsx! {
                                     SwipeAction {
-                                        side: SwipeSide::Start,
-                                        accent: true,
-                                        onclick: move |_| {
-                                            let toggle_id = toggle_id.clone();
-                                            spawn(async move {
-                                                match set_note_pinned(toggle_id, !pinned).await {
-                                                    Ok(_) => app_state.bump_data(),
-                                                    Err(error) => app_state.show_toast(
-                                                        format!("Could not update the note: {error}"),
-                                                        StatusColor::Danger,
-                                                    ),
-                                                }
-                                            });
-                                        },
-                                        if pinned { "Unpin" } else { "Pin" }
+                                        color: Color::Accent,
+                                        onclick: move |_| toggle_pin(index),
+                                        if note.pinned { "Unpin" } else { "Pin" }
                                     }
                                 },
                                 Item {
                                     start: rsx! {
-                                        if pinned {
-                                            Pin { size: 18, color: "var(--color-focused)" }
+                                        if note.pinned {
+                                            Pin { size: 18, color: "var(--g3-color-accent)" }
                                         } else {
-                                            PinOff { size: 18, color: "var(--color-label-secondary)" }
+                                            PinOff { size: 18, color: "var(--g3-color-text-secondary)" }
                                         }
                                     },
                                     label: note.title.clone(),
                                     description: relative_time(&note.updated_at),
                                     detail: ItemDetail::Show,
-                                    onclick: move |_| {
-                                        spawn(animated_navigate(Route::NoteDetail { id: open_id.clone() }));
-                                    },
+                                    onclick: move |_| open(index),
                                 }
                             }
                         }

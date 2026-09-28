@@ -24,14 +24,14 @@ manganis = "=0.7.9"
 # g3-route-transitions' `native-back` feature each depend on the matching
 # release of the next crate down, so a mismatched minor version pulls in two
 # copies and the snapshot classes stop lining up.
-g3-ui = { version = "0.3.0", features = ["transitions"] }
-g3-route-transitions = { version = "0.3.0", features = ["native-back"] }
+g3-ui = { version = "0.4.2", features = ["transitions"] }
+g3-route-transitions = { version = "0.4.1", features = ["native-back"] }
 # Not optional, and not per-platform: the crate compiles a plugin with no
 # implementation for the current target down to an inert no-op, so one
 # dependency line serves web, Android, iOS, and the server build. Each feature
 # is a separate plugin; enable only the ones you call. The full list, and which
 # platforms each one works on, is in docs/native-plugins.md.
-g3-native-plugins = { version = "0.4.0", features = [
+g3-native-plugins = { version = "0.4.1", features = [
     "back-button",
     "clipboard",
     "external-url",
@@ -41,7 +41,7 @@ g3-native-plugins = { version = "0.4.0", features = [
 g3-auth = "0.1.1"
 # The screen cache on the device, server caches, and CDN headers for shared
 # reads. Enable its platform feature in each app feature below.
-g3-cache = "0.1.0"
+g3-cache = "0.2.0"
 
 # --- Shared (client + server) --------------------------------------------
 # `surrealdb-types` carries the `SurrealValue` derive and the `RecordId` /

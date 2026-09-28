@@ -1,21 +1,19 @@
 use crate::app::Route;
 use dioxus::prelude::*;
-use dioxus_icons::lucide::ChevronLeft;
-use g3_ui::{Button, ButtonStyle};
+use g3_route_transitions::animated_back_or_navigate;
 
-/// Back chevron for `Header`'s `start_button` slot.
+/// Back for pushed pages and sheets, meant for `Header`'s `start` slot.
 ///
-/// `animated_go_back` takes the outgoing snapshot, derives the reverse
-/// animation from the route's own metadata (a sheet dismisses downward, a
-/// pushed page slides right), and *then* pops real browser history. The
-/// fallback below is only reached when there is no history to pop — someone
-/// opened a deep link straight to this page, or refreshed on it — which is
-/// exactly when a hardcoded "go to the home route" would strand them
+/// g3-ui's `BackButton` draws it; this supplies the behaviour, since only the
+/// app knows its `Route`. `animated_back_or_navigate` pops real history with
+/// the reverse of the route's own animation (a sheet dismisses downward, a
+/// pushed page slides back). The fallback is only reached when there is no
+/// history to pop — someone opened a link straight to this page, or reloaded
+/// on it — which is exactly when a hardcoded "go home" would strand them
 /// somewhere unrelated to where they are.
 #[component]
 pub fn BackButton() -> Element {
     let route: Route = use_route();
-
     let fallback = match route {
         // Editing a note belongs to that note; leaving the editor should land
         // on it, not back at the list.
@@ -24,16 +22,10 @@ pub fn BackButton() -> Element {
     };
 
     rsx! {
-        Button {
-            style: ButtonStyle::Clear,
-            aria_label: Some("Back".to_string()),
+        g3_ui::BackButton {
             onclick: move |_| {
-                let fallback = fallback.clone();
-                spawn(async move {
-                    g3_route_transitions::animated_go_back(fallback).await;
-                });
+                spawn(animated_back_or_navigate(fallback.clone()));
             },
-            ChevronLeft { size: 20 }
         }
     }
 }
