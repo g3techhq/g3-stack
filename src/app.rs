@@ -202,19 +202,6 @@ fn ThemedShell() -> Element {
         document::Link { rel: "icon", r#type: "image/svg+xml", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
 
-        // Works around g3-ui 0.4.2. `AppWrapper` links its stylesheet at
-        // runtime on every non-wasm target, which includes the *server* build,
-        // but not in the web client. The server therefore writes one more
-        // head element to the hydration stream than the client reads, and
-        // every component after it decodes its state from the wrong slot
-        // (logged as "Error deserializing data ... CapturedError"). Rendering
-        // the same link here on the web client, in the same position, evens
-        // the count. The browser already has the file, so it costs nothing.
-        // Delete this once a g3-ui release gates that link to match.
-        if cfg!(target_arch = "wasm32") {
-            document::Link { rel: "stylesheet", href: g3_ui::UI_CSS }
-        }
-
         // Mounted unconditionally. The provider renders nothing but its
         // children, and only installs the plugin context on targets that have
         // one, so the tree is the same shape everywhere — which is what
