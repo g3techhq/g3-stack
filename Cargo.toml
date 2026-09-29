@@ -31,7 +31,7 @@ g3-route-transitions = { version = "0.4.3", features = ["native-back"] }
 # dependency line serves web, Android, iOS, and the server build. Each feature
 # is a separate plugin; enable only the ones you call. The full list, and which
 # platforms each one works on, is in docs/native-plugins.md.
-g3-native-plugins = { version = "0.4.1", features = [
+g3-native-plugins = { version = "0.4.2", features = [
     "back-button",
     "clipboard",
     "external-url",

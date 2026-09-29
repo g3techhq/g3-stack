@@ -11,7 +11,7 @@ with Apple, system Back. One call site serves web, Android, and iOS.
 Each plugin is a Cargo feature. The template enables three:
 
 ```toml
-g3-native-plugins = { version = "0.4.0", features = ["back-button", "clipboard", "external-url"] }
+g3-native-plugins = { version = "0.4.2", features = ["back-button", "clipboard", "external-url"] }
 ```
 
 | Feature | Android | iOS | Web | What it does |
@@ -26,6 +26,9 @@ g3-native-plugins = { version = "0.4.0", features = ["back-button", "clipboard",
 | `camera-microphone` | yes | yes | — | Permission state and prompts around `getUserMedia` |
 | `media` | yes | yes | — | Background playback, lock-screen controls, picture-in-picture |
 | `in-app-purchases` | yes | yes | — | StoreKit 2 and Play Billing: products, purchases, subscriptions, restore |
+| `notifications` | yes | yes | — | Local notifications, shown now or scheduled, with buttons, replies and Android channels |
+| `push-notifications` | yes | yes | — | APNs and Firebase Cloud Messaging: tokens, messages and taps. Needs a Firebase project on Android |
+| `updater` | yes | yes | — | Signed over-the-air updates of the web bundle the WebView loads (never the Rust binary) |
 
 "—" means the calls compile and do nothing. **A plugin never fails the build on
 a platform it does not support**, which is what lets one dependency line serve
