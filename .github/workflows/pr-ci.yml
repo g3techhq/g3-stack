@@ -90,11 +90,12 @@ jobs:
 
   # This repository is also the `dx new` template. Check that the twins match
   # their plain files, then generate a project the way `dx new` would and
-  # type-check it under its new name. Skipped in a generated project, which
-  # has no template config.
+  # type-check it under its new name. Only in the template's own repository:
+  # a generated project has no template to check. (`hashFiles` would say so
+  # more directly, but a job-level `if` cannot call it.)
   template:
     name: Template
-    if: hashFiles('cargo-generate.toml') != ''
+    if: github.repository == 'g3techhq/g3-stack'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
