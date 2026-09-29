@@ -102,6 +102,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          # The whole history, so the git clone below can find this commit.
+          fetch-depth: 0
 
       - name: Template twins are current
         run: node scripts/template.mjs --check
@@ -113,15 +115,19 @@ jobs:
           shared-key: template
           workspaces: ${{ runner.temp }}/trail-notes
 
-      # The cargo-generate that `dx` 0.7.9 embeds, so this renders exactly
-      # what `dx new` does.
+      # The cargo-generate that `dx` 0.7.9 embeds: 0.23.3, not the newer one the
+      # Dioxus repository pins today. They differ in how a git template's
+      # `.liquid` files are matched.
       - uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
       - name: Install cargo-generate
-        run: cargo binstall --no-confirm cargo-generate@0.23.10
+        run: cargo binstall --no-confirm cargo-generate@0.23.3
 
+      # From git, as `dx new --template gh:g3techhq/g3-stack` does, rather than
+      # from the folder, which cargo-generate reads differently.
       - name: Generate a project
         run: >
-          cargo generate --path . --name trail-notes --silent
+          cargo generate --git "file://${{ github.workspace }}" --revision "${{ github.sha }}"
+          --name trail-notes --silent
           --destination "${{ runner.temp }}" --define bundle_id=dev.example.trailnotes
 
       - name: The new name reached every file
