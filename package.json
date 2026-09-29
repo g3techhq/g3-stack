@@ -16,7 +16,7 @@
     "rename": "node scripts/rename.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.12",
+    "@biomejs/biome": "2.5.14",
     "@playwright/test": "^1.56.1"
   }
 }
