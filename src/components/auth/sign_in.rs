@@ -1,6 +1,4 @@
-use crate::{
-    app::Route, auth::sign_in_guest, components::shared::error_message, state::AppState,
-};
+use crate::{app::Route, auth::sign_in_guest, components::shared::error_message, state::AppState};
 use dioxus::prelude::*;
 use g3_route_transitions::animated_navigate;
 use g3_ui::{

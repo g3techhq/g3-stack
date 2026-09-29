@@ -60,12 +60,19 @@ Everything about color is `app_theme` in `src/app.rs`:
 
 ```rust
 pub fn app_theme(scheme: ColorScheme) -> Theme {
+    let light = || Theme::default_light().with_accent("#2563eb");
+    let dark = || Theme::default_dark().with_accent("#3b82f6");
     match scheme {
-        ColorScheme::Light => Theme::default_light().with_accent("#2563eb"),
-        ColorScheme::Dark => Theme::default_dark().with_accent("#3b82f6"),
+        ColorScheme::Auto => Theme::adaptive(light(), dark()),
+        ColorScheme::Light => light(),
+        ColorScheme::Dark => dark(),
     }
 }
 ```
+
+`Auto`, the default, is `Theme::adaptive`: every token becomes a CSS
+`light-dark()` pair, so the page follows the system setting with no script, and
+the server's HTML is already right. Change the two palettes and `Auto` follows.
 
 `with_accent` changes the accent, which is most of what makes an app look like
 itself: primary buttons, selected segments and tabs, toggles, focus rings, and
@@ -75,7 +82,7 @@ For a full palette, override any field with struct-update syntax (the fields
 are listed in [g3-ui.md](g3-ui.md#theme)). A warm light theme, for example:
 
 ```rust
-ColorScheme::Light => Theme {
+let light = || Theme {
     accent: "#a9530b".into(),
     bg: "#e8dcc8".into(),
     bg_secondary: "#dccdb4".into(),
@@ -87,7 +94,7 @@ ColorScheme::Light => Theme {
     text_secondary: "#6e5c4a".into(),
     text_tertiary: "#7a6653".into(),
     ..Theme::default_light()
-},
+};
 ```
 
 Two things make a palette hold up:

@@ -47,8 +47,8 @@ impl Default for CreateUser {
             handle: String::new(),
             display_name: "New User".to_string(),
             email: None,
-            appearance_mode: AppearanceMode::Ios,
-            color_scheme: ColorScheme::Light,
+            appearance_mode: AppearanceMode::Auto,
+            color_scheme: ColorScheme::Auto,
             created_at: Datetime::default(),
         }
     }
@@ -69,12 +69,16 @@ impl Default for CreateUser {
 ///
 /// The `surreal` values match the literals `database/schema/user.surql`
 /// constrains the column to, so the Rust type and the database agree on
-/// exactly two spellings.
+/// exactly these spellings.
 #[derive(
     Serialize, Deserialize, SurrealValue, Display, EnumString, Clone, Copy, PartialEq, Eq, Debug,
 )]
 #[surreal(untagged)]
 pub enum AppearanceMode {
+    /// The device's own: iOS on an iPhone or iPad, Material elsewhere.
+    #[surreal(value = "auto")]
+    #[strum(to_string = "auto")]
+    Auto,
     #[surreal(value = "ios")]
     #[strum(to_string = "ios")]
     Ios,
@@ -90,6 +94,10 @@ pub enum AppearanceMode {
 )]
 #[surreal(untagged)]
 pub enum ColorScheme {
+    /// The system's light or dark setting, followed as it changes.
+    #[surreal(value = "auto")]
+    #[strum(to_string = "auto")]
+    Auto,
     #[surreal(value = "light")]
     #[strum(to_string = "light")]
     Light,
@@ -109,11 +117,19 @@ mod tests {
     /// derive to `{ Ios: {} }`, which compiles, type-checks, and passes every
     /// other test — then fails on the first insert with "Expected `'ios' |
     /// 'md'` but found `{ Ios: {  } }`", because the column in
-    /// `database/schema/user.surql` constrains it to those two strings.
+    /// `database/schema/user.surql` constrains it to those strings.
     ///
     /// Copy this test whenever you add an enum that a schema constrains.
     #[test]
     fn appearance_enums_store_as_the_bare_strings_the_schema_expects() {
+        assert_eq!(
+            AppearanceMode::Auto.into_value(),
+            Value::String("auto".to_string())
+        );
+        assert_eq!(
+            ColorScheme::Auto.into_value(),
+            Value::String("auto".to_string())
+        );
         assert_eq!(
             AppearanceMode::Ios.into_value(),
             Value::String("ios".to_string())

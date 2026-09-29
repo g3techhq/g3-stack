@@ -154,9 +154,15 @@ fn RootLayout() -> Element {
 /// of what makes an app look like itself. docs/styling.md walks through a full
 /// palette.
 pub fn app_theme(scheme: ColorScheme) -> Theme {
+    let light = || Theme::default_light().with_accent("#2563eb");
+    let dark = || Theme::default_dark().with_accent("#3b82f6");
     match scheme {
-        ColorScheme::Light => Theme::default_light().with_accent("#2563eb"),
-        ColorScheme::Dark => Theme::default_dark().with_accent("#3b82f6"),
+        // Every token becomes a CSS `light-dark()` pair, so the browser follows
+        // the system setting by itself: no script, and the server's HTML is
+        // already right.
+        ColorScheme::Auto => Theme::adaptive(light(), dark()),
+        ColorScheme::Light => light(),
+        ColorScheme::Dark => dark(),
     }
 }
 

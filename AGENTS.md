@@ -94,7 +94,7 @@ If you could not do one of these, say which and why.
 - **Never override g3-ui's own class names.** If a component cannot do what is
   needed, say so rather than patching around it.
 - Stateful g3-ui components take an owned `Signal` and write it:
-  `Input { value: title }`, `Toggle { checked: dark }`. A control that follows
+  `Input { value: title }`, `Toggle { checked: on }`. A control that follows
   the route rather than owning its value sets `defer_selection` and reports
   picks through `onchange` (see `NotesToolbar`).
 - Feedback goes through `use_toast()`, questions through `use_alert()`.

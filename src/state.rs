@@ -21,7 +21,12 @@ use g3_ui::ComponentMode;
 #[derive(Clone, Copy)]
 pub struct AppState {
     pub user: Signal<Option<User>>,
+    /// The style the user picked, which may be `Auto`.
+    pub appearance: Signal<AppearanceMode>,
+    /// The style actually drawn: `appearance` with `Auto` resolved.
     pub mode: Signal<ComponentMode>,
+    /// The picked light or dark, which may be `Auto`. It needs no resolving:
+    /// `app_theme` turns `Auto` into a theme the browser switches itself.
     pub color_scheme: Signal<ColorScheme>,
 
     /// Bumped after every mutation (see [`AppState::changed`]). A read that
@@ -37,8 +42,9 @@ impl AppState {
     fn new() -> Self {
         Self {
             user: Signal::new(None),
-            mode: Signal::new(ComponentMode::Ios),
-            color_scheme: Signal::new(ColorScheme::Light),
+            appearance: Signal::new(AppearanceMode::Auto),
+            mode: Signal::new(first_render_mode(AppearanceMode::Auto)),
+            color_scheme: Signal::new(ColorScheme::Auto),
             data_version: Signal::new(0),
         }
     }
@@ -56,8 +62,9 @@ impl AppState {
     /// Called with whatever the server said: at startup by
     /// `AppStateProvider`, and by `SignIn` with the account it just created.
     pub fn apply_user(&mut self, user: User) {
-        let mode = to_component_mode(user.appearance_mode);
+        let mode = first_render_mode(user.appearance_mode);
         apply_mode(mode);
+        self.appearance.set(user.appearance_mode);
         self.mode.set(mode);
         self.color_scheme.set(user.color_scheme);
         self.user.set(Some(user));
@@ -69,29 +76,41 @@ impl AppState {
     /// Optimistic on purpose: a theme toggle that waits for a round trip
     /// feels broken. If the save fails the next page load reverts it, which
     /// is the right amount of ceremony for a preference.
-    pub fn set_appearance(&mut self, mode: ComponentMode, scheme: ColorScheme) {
+    pub fn set_appearance(&mut self, appearance: AppearanceMode, scheme: ColorScheme) {
+        // Past hydration, so `Auto` can look at the device directly.
+        let mode = resolve_mode(appearance);
         apply_mode(mode);
+        self.appearance.set(appearance);
         self.mode.set(mode);
         self.color_scheme.set(scheme);
 
-        let appearance = to_appearance_mode(mode);
         spawn(async move {
             let _ = update_appearance(appearance, scheme).await;
         });
     }
 }
 
-pub fn to_component_mode(mode: AppearanceMode) -> ComponentMode {
-    match mode {
+/// The style a preference draws, with `Auto` read from the device.
+pub fn resolve_mode(appearance: AppearanceMode) -> ComponentMode {
+    match appearance {
+        AppearanceMode::Auto => g3_ui::detect_platform_mode(),
         AppearanceMode::Ios => ComponentMode::Ios,
         AppearanceMode::Md => ComponentMode::Md,
     }
 }
 
-pub fn to_appearance_mode(mode: ComponentMode) -> AppearanceMode {
-    match mode {
-        ComponentMode::Ios => AppearanceMode::Ios,
-        ComponentMode::Md => AppearanceMode::Md,
+/// [`resolve_mode`], except for `Auto` in a browser before hydration.
+///
+/// The server cannot see the device, so it renders `Auto` as Material, and
+/// the browser's first render has to match that or hydration keeps the
+/// server's markup under the client's state. `AppStateProvider` switches to
+/// the device's own style in an effect, once hydration is done. The native
+/// apps render no server HTML, so they resolve at once and never flash.
+pub fn first_render_mode(appearance: AppearanceMode) -> ComponentMode {
+    if cfg!(target_arch = "wasm32") && appearance == AppearanceMode::Auto {
+        ComponentMode::Md
+    } else {
+        resolve_mode(appearance)
     }
 }
 
@@ -122,6 +141,18 @@ pub fn AppStateProvider(children: Element) -> Element {
     // component: a loop that burns frames on the client and, during SSR —
     // which renders until nothing is dirty — never returns a response at all.
     apply_mode(*app_state.mode.peek());
+
+    // `Auto` rendered as Material to match the server (see
+    // `first_render_mode`); now switch to the device's own style. Reads only
+    // `appearance`, so it reruns when the preference changes and never on its
+    // own write.
+    use_effect(move || {
+        if (app_state.appearance)() == AppearanceMode::Auto {
+            let mode = resolve_mode(AppearanceMode::Auto);
+            apply_mode(mode);
+            app_state.mode.set(mode);
+        }
+    });
 
     // Above the `?` below, like every hook here: a hook after an early return
     // runs on some renders and not others. The client cache holds one user's

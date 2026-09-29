@@ -2,15 +2,14 @@ use crate::{
     app::Route,
     auth::{delete_account, sign_out},
     components::shared::{confirm_destructive, error_message},
-    db::ColorScheme,
+    db::{AppearanceMode, ColorScheme},
     state::AppState,
 };
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{ClipboardCopy, ExternalLink, Share2};
 use g3_ui::{
-    Button, ButtonExpand, ButtonFill, Card, Color, ComponentMode, Item, ItemDetail, List,
-    ListLines, ListVariant, SegmentButton, SegmentGroup, Stack, Text, TextTone, Toggle, use_alert,
-    use_toast,
+    Button, ButtonExpand, ButtonFill, Card, Color, Item, ItemDetail, List, ListLines, ListVariant,
+    SegmentButton, SegmentGroup, Stack, Text, TextTone, use_alert, use_toast,
 };
 
 /// Appearance, native-plugin demos, and the account.
@@ -32,50 +31,44 @@ pub fn Settings() -> Element {
 
 /// Split out so a theme change re-renders these controls, not the account
 /// card and the plugin demos beside them.
+///
+/// Both groups show `AppState`'s own signals and only report a pick
+/// (`defer_selection`): `set_appearance` applies and saves it, so there is no
+/// second copy here to fall out of step with a preference loaded later.
 #[component]
 fn Appearance() -> Element {
     let mut app_state = use_context::<AppState>();
 
-    // `SegmentGroup` and `Toggle` own a `Signal`, so these mirror `AppState`.
-    // Each effect reads the state it follows, so it reruns when that changes
-    // for a reason other than this screen's own controls, such as the stored
-    // preference arriving after the mirror was set up.
-    let mut mode = use_signal(|| *app_state.mode.peek());
-    let mut dark = use_signal(|| *app_state.color_scheme.peek() == ColorScheme::Dark);
-    use_effect(move || mode.set((app_state.mode)()));
-    use_effect(move || dark.set((app_state.color_scheme)() == ColorScheme::Dark));
-
     rsx! {
         Card { title: "Appearance",
-            Text { tone: TextTone::Secondary,
-                "iOS and Material are Ionic's two modes. Switching restyles every component "
-                "and changes how the next screen animates in."
-            }
-            SegmentGroup {
-                value: mode,
-                aria_label: "Platform style",
-                defer_selection: true,
-                onchange: move |mode: ComponentMode| {
-                    let scheme = *app_state.color_scheme.peek();
-                    app_state.set_appearance(mode, scheme);
-                },
-                SegmentButton { value: ComponentMode::Ios, "iOS" }
-                SegmentButton { value: ComponentMode::Md, "Material" }
-            }
-            List { variant: ListVariant::Raised, lines: ListLines::None,
-                Item {
-                    label: "Dark mode",
-                    end: rsx! {
-                        Toggle {
-                            checked: dark,
-                            aria_label: "Dark mode",
-                            onchange: move |on: bool| {
-                                let scheme = if on { ColorScheme::Dark } else { ColorScheme::Light };
-                                let mode = *app_state.mode.peek();
-                                app_state.set_appearance(mode, scheme);
-                            },
-                        }
+            Stack {
+                Text { tone: TextTone::Secondary,
+                    "iOS and Material are Ionic's two modes. Switching restyles every component "
+                    "and changes how the next screen animates in. Auto follows the device."
+                }
+                SegmentGroup {
+                    value: app_state.appearance,
+                    label: "Style",
+                    defer_selection: true,
+                    onchange: move |appearance: AppearanceMode| {
+                        let scheme = *app_state.color_scheme.peek();
+                        app_state.set_appearance(appearance, scheme);
                     },
+                    SegmentButton { value: AppearanceMode::Auto, "Auto" }
+                    SegmentButton { value: AppearanceMode::Ios, "iOS" }
+                    SegmentButton { value: AppearanceMode::Md, "Material" }
+                }
+                SegmentGroup {
+                    value: app_state.color_scheme,
+                    label: "Theme",
+                    defer_selection: true,
+                    onchange: move |scheme: ColorScheme| {
+                        let appearance = *app_state.appearance.peek();
+                        app_state.set_appearance(appearance, scheme);
+                    },
+                    SegmentButton { value: ColorScheme::Auto, "Auto" }
+                    SegmentButton { value: ColorScheme::Dark, "Dark" }
+                    SegmentButton { value: ColorScheme::Light, "Light" }
                 }
             }
         }
@@ -128,17 +121,23 @@ fn Account() -> Element {
                 navigator.replace(Route::Splash {});
             }
             Err(error) => {
-                toast.error(format!("Could not delete the account: {}", error_message(&error)));
+                toast.error(format!(
+                    "Could not delete the account: {}",
+                    error_message(&error)
+                ));
             }
         }
     };
 
     let user = app_state.user.read();
-    let handle = user.as_ref().map(|user| user.handle.as_str()).unwrap_or_default();
+    let handle = user
+        .as_ref()
+        .map(|user| user.handle.as_str())
+        .unwrap_or_default();
 
     rsx! {
         Card { title: "Account",
-            List { variant: ListVariant::Raised, lines: ListLines::Inset,
+            List { variant: ListVariant::EdgeToEdge, lines: ListLines::Inset,
                 Item { label: "Signed in as", metadata: handle }
                 Item {
                     label: "Sign out",
@@ -191,7 +190,7 @@ fn NativePluginDemos() -> Element {
     rsx! {
         Card { title: "Native plugins",
             Text { tone: TextTone::Secondary, "The same calls on web, Android, and iOS." }
-            List { variant: ListVariant::Raised, lines: ListLines::Inset,
+            List { variant: ListVariant::EdgeToEdge, lines: ListLines::Inset,
                 Item {
                     start: rsx! { ClipboardCopy { size: 20 } },
                     label: "Copy text",

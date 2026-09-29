@@ -10,8 +10,10 @@ DEFINE FIELD IF NOT EXISTS email ON user TYPE option<string>;
 -- Appearance preferences live on the account, not in browser storage, so a
 -- signed-in user sees the same app on every device. `AppState` mirrors them
 -- into signals at startup (see src/state.rs).
-DEFINE FIELD IF NOT EXISTS appearance_mode ON user TYPE "ios" | "md" DEFAULT "ios";
-DEFINE FIELD IF NOT EXISTS color_scheme ON user TYPE "light" | "dark" DEFAULT "light";
+-- "auto" follows the device: iOS styling on an iPhone or iPad, Material
+-- elsewhere, and the system's light or dark setting.
+DEFINE FIELD IF NOT EXISTS appearance_mode ON user TYPE "auto" | "ios" | "md" DEFAULT "auto";
+DEFINE FIELD IF NOT EXISTS color_scheme ON user TYPE "auto" | "light" | "dark" DEFAULT "auto";
 
 DEFINE FIELD IF NOT EXISTS created_at ON user TYPE datetime DEFAULT time::now();
 

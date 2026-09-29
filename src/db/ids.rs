@@ -40,8 +40,8 @@ mod tests {
             handle: "someone".to_string(),
             display_name: "Someone".to_string(),
             email: None,
-            appearance_mode: crate::db::AppearanceMode::Ios,
-            color_scheme: crate::db::ColorScheme::Light,
+            appearance_mode: crate::db::AppearanceMode::Auto,
+            color_scheme: crate::db::ColorScheme::Auto,
             created_at: Datetime::default(),
         };
         let note = Note {

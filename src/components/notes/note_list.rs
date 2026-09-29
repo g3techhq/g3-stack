@@ -99,7 +99,10 @@ pub fn Notes(filter: ReadSignal<Option<NotesFilter>>) -> Element {
             // "Set to", not "toggle": a device showing a stale list cannot
             // undo a change another device made.
             if let Err(error) = set_note_pinned(id, pinned).await {
-                toast.error(format!("Could not update the note: {}", error_message(&error)));
+                toast.error(format!(
+                    "Could not update the note: {}",
+                    error_message(&error)
+                ));
             }
             app_state.changed(DataChange::Notes);
         });
@@ -116,7 +119,11 @@ pub fn Notes(filter: ReadSignal<Option<NotesFilter>>) -> Element {
 
     if shown.read().is_empty() {
         let pinned_only = filter().unwrap_or_default() == NotesFilter::Pinned;
-        let title = if pinned_only { "No pinned notes" } else { "No notes yet" };
+        let title = if pinned_only {
+            "No pinned notes"
+        } else {
+            "No notes yet"
+        };
         return rsx! {
             EmptyState {
                 title,
@@ -129,7 +136,7 @@ pub fn Notes(filter: ReadSignal<Option<NotesFilter>>) -> Element {
                     }
                 },
                 if pinned_only {
-                    "Swipe a note to the right to pin it."
+                    "Pin a note from its page, or swipe it to the right."
                 } else {
                     "Notes you write show up here."
                 }

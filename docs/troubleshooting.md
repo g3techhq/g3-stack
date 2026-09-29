@@ -124,7 +124,7 @@ effect in `AppStateProvider` whenever `user` changes; keep it there.
 Responsive rules query the g3-ui shell with `@container g3-app-shell`, not the
 viewport. If you added a media query, convert it.
 
-**The theme toggle flips back by itself**
+**A theme or style pick flips back by itself**
 Something re-applies the stored preference after the user changed it. Apply the
 user's saved appearance once — see `AppStateProvider` in `src/state.rs`.
 

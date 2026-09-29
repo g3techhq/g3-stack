@@ -5,16 +5,16 @@ use crate::{
         shared::{LoadFailed, confirm_destructive, error_message},
     },
     data_change::DataChange,
-    db::{delete_note, get_note, relative_time},
+    db::{Note, delete_note, get_note, list_notes, relative_time, set_note_pinned},
     state::AppState,
 };
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{FileX, Pencil};
-use g3_cache::use_cached;
+use dioxus_icons::lucide::{FileX, Pencil, Pin, PinOff};
+use g3_cache::{update_all_cached, update_cached, use_cached};
 use g3_route_transitions::animated_navigate;
 use g3_ui::{
-    Button, ButtonExpand, ButtonFill, Card, Color, Content,
-    ContentWidth, EmptyState, Header, Spinner, Text, TextTone, use_alert, use_toast,
+    Button, ButtonExpand, ButtonFill, Card, Color, Content, ContentWidth, EmptyState, Header,
+    Spinner, Text, TextTone, use_alert, use_toast,
 };
 
 /// A pushed page. It renders inside `AppShell`, so the rail stays put, but
@@ -36,9 +36,46 @@ pub fn NoteDetail(id: ReadSignal<String>) -> Element {
     // reopening a note shows it at once and refetches behind it.
     let note = use_cached(get_note, (id(),));
 
+    // Read by the header's pin button, which is built before the match
+    // below and so cannot borrow the note from it.
+    let pinned = use_memo(move || matches!(&*note.read(), Some(Ok(Some(note))) if note.pinned));
+
+    // The same set-to, update-then-reconcile shape as the list's swipe.
+    let toggle_pin = move |_| {
+        let next = !pinned();
+        let id = id();
+        update_cached(get_note, (id.clone(),), |note: &mut Option<Note>| {
+            if let Some(note) = note {
+                note.pinned = next;
+            }
+        });
+        update_all_cached(list_notes, |notes: &mut Vec<Note>| {
+            for note in notes
+                .iter_mut()
+                .filter(|note| crate::db::record_key(&note.id) == id)
+            {
+                note.pinned = next;
+            }
+        });
+        spawn(async move {
+            if let Err(error) = set_note_pinned(id, next).await {
+                toast.error(format!(
+                    "Could not update the note: {}",
+                    error_message(&error)
+                ));
+            }
+            app_state.changed(DataChange::Notes);
+        });
+    };
+
     let delete = move |_| async move {
-        if !confirm_destructive(alerts, "Delete this note?", "This cannot be undone.", "Delete")
-            .await
+        if !confirm_destructive(
+            alerts,
+            "Delete this note?",
+            "This cannot be undone.",
+            "Delete",
+        )
+        .await
         {
             return;
         }
@@ -52,7 +89,10 @@ pub fn NoteDetail(id: ReadSignal<String>) -> Element {
                 navigator.replace(Route::Notes { filter: None });
             }
             Err(error) => {
-                toast.error(format!("Could not delete the note: {}", error_message(&error)));
+                toast.error(format!(
+                    "Could not delete the note: {}",
+                    error_message(&error)
+                ));
             }
         }
     };
@@ -62,6 +102,16 @@ pub fn NoteDetail(id: ReadSignal<String>) -> Element {
             title: "Note",
             start: rsx! { BackButton {} },
             end: rsx! {
+                Button {
+                    fill: ButtonFill::Clear,
+                    aria_label: if pinned() { "Unpin" } else { "Pin" },
+                    onclick: toggle_pin,
+                    if pinned() {
+                        PinOff { size: 20 }
+                    } else {
+                        Pin { size: 20 }
+                    }
+                }
                 Button {
                     fill: ButtonFill::Clear,
                     aria_label: "Edit",

@@ -28,7 +28,7 @@ Type-checking proves it compiles. This proves it works.
    half-finished animation and misread it as a bug.
 5. If the change affects layout, repeat the key screens at **1440×900**, where
    the tab bar becomes a left rail.
-6. If it touches appearance, switch Settings to Material and dark mode and look
+6. If it touches appearance, switch Settings to Material and Dark and look
    again.
 
 ## 3. Read the evidence

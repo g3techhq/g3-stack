@@ -107,23 +107,47 @@ test("appearance settings apply without losing the session", async ({ page }) =>
   //
   // Switching mode re-themes the tree in place rather than remounting it, so the
   // tab bar has to survive the switch.
-  await page.getByRole("radio", { name: "Material" }).click();
+  const style = page.getByRole("radiogroup", { name: "Style" });
+  const theme = page.getByRole("radiogroup", { name: "Theme" });
+
+  // A new account follows the device until it picks otherwise.
+  await expect(style.getByRole("radio", { name: "Auto" })).toBeChecked();
+  await expect(theme.getByRole("radio", { name: "Auto" })).toBeChecked();
+
+  await style.getByRole("radio", { name: "Material" }).click();
   await expect(page.getByRole("button", { name: "Notes" })).toBeVisible();
 
-  await page.getByRole("switch").click();
+  await theme.getByRole("radio", { name: "Dark" }).click();
 
   // A regression guard, not a formality: a stored preference applied late used
   // to overwrite whatever the user had just picked — a toggle that flips itself
   // back. Waiting past that window and re-asserting is what catches its return.
   await page.waitForTimeout(1500);
-  await expect(page.getByRole("radio", { name: "Material" })).toBeChecked();
-  await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+  await expect(style.getByRole("radio", { name: "Material" })).toBeChecked();
+  await expect(theme.getByRole("radio", { name: "Dark" })).toBeChecked();
 
   // Saved to the account and rendered by the server, so a reload comes back
   // signed in and still dark rather than at sign-in in the default theme.
   await page.reload();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+  await expect(theme.getByRole("radio", { name: "Dark" })).toBeChecked();
+});
+
+test("a note can be pinned from its page", async ({ page }) => {
+  await signIn(page);
+  const title = `Pinned note ${Date.now()}`;
+  await page.getByRole("button", { name: "New note" }).click();
+  await page.getByLabel("Title").fill(title);
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await page.getByText(title).click();
+  await page.getByRole("button", { name: "Pin", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Unpin" })).toBeVisible();
+
+  // The Pinned filter shows it, from the cache at once and after the refetch.
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("radio", { name: "Pinned" }).click();
+  await expect(page.getByText(title)).toBeVisible();
 });
 
 test("a guest can delete their account", async ({ page }) => {

@@ -106,7 +106,9 @@ fn NoteForm(id: Option<String>, title: String, body: String) -> Element {
         spawn(async move {
             let (result, leave_to) = match id {
                 Some(id) => (
-                    update_note(id.clone(), clean_title, clean_body).await.map(|_| ()),
+                    update_note(id.clone(), clean_title, clean_body)
+                        .await
+                        .map(|_| ()),
                     Route::NoteDetail { id },
                 ),
                 None => (
@@ -125,7 +127,10 @@ fn NoteForm(id: Option<String>, title: String, body: String) -> Element {
                 }
                 Err(error) => {
                     saving.set(false);
-                    toast.error(format!("Could not save the note: {}", error_message(&error)));
+                    toast.error(format!(
+                        "Could not save the note: {}",
+                        error_message(&error)
+                    ));
                 }
             }
         });
