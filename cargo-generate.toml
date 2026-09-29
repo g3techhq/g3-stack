@@ -1,0 +1,20 @@
+# Makes this repository a template for `dx new`:
+#
+#   dx new my-app --template gh:g3techhq/g3-stack
+#
+# `dx new` runs cargo-generate. Only the `.liquid` twins are rendered: each
+# replaces its plain file with the app's own names in it. They are generated
+# by `just template` from the plain files, which stay a working app. Every
+# other file is copied as it is, which matters for the Rust sources and the
+# GitHub workflows, both full of braces Liquid would try to read.
+
+[template]
+cargo_generate_version = ">=0.23"
+include = ["**/*.liquid"]
+# About the template itself, not the app it becomes.
+ignore = ["scripts/template.mjs", "scripts/template.test.mjs"]
+
+[placeholders.bundle_id]
+type = "string"
+prompt = "Bundle identifier for the app stores? Leave empty for com.example.<name>."
+default = ""

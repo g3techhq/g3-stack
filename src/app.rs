@@ -168,10 +168,11 @@ pub fn app_theme(scheme: ColorScheme) -> Theme {
 
 #[component]
 pub fn App() -> Element {
-    // First thing: names the device's cache store (rename it for your app),
-    // and refetches what mounted screens show when the app comes back into
-    // view. See `use_cached` in the notes screens.
-    g3_cache::use_client_cache(g3_cache::CacheConfig::new("g3-app"));
+    // First thing: names the device's cache store after the crate, so two apps
+    // on one origin never read each other's, and refetches what mounted
+    // screens show when the app comes back into view. See `use_cached` in the
+    // notes screens.
+    g3_cache::use_client_cache(g3_cache::CacheConfig::new(env!("CARGO_PKG_NAME")));
 
     rsx! {
         AppStateProvider {

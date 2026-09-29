@@ -1,0 +1,53 @@
+# Multi-stage build for the fullstack web server. `cargo-chef` caches the
+# dependency build so an app-code change does not recompile the whole tree.
+FROM rust:1 AS chef
+RUN cargo install cargo-chef
+
+# The Dioxus CLI produces the bundle.
+RUN curl -L --proto '=https' --tlsv1.2 -sSf \
+      https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall dioxus-cli@0.7.9 --root /.cargo -y --force
+ENV PATH="/.cargo/bin:$PATH"
+
+# `ring` (via rustls) needs a C toolchain to build.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends clang llvm curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# `getrandom` needs to be told it is running in a browser on the wasm target.
+RUN printf '[target.wasm32-unknown-unknown]\nrustflags = ["--cfg", "getrandom_backend=\\"wasm_js\\""]\n' \
+      > /usr/local/cargo/config.toml
+
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+
+# No SERVER_URL here. The web client calls the origin that served it, so one
+# image works behind any hostname. Only mobile builds compile a URL in — see
+# src/server_url.rs.
+RUN dx bundle --platform web -r
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/dx/{{ project-name }}/release/web/ /usr/local/app
+
+ENV PORT=8080
+ENV IP=0.0.0.0
+EXPOSE 8080
+
+# Readiness, not liveness: this one fails while the database is unreachable.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/api/v1/health/ready || exit 1
+
+WORKDIR /usr/local/app
+ENTRYPOINT ["/usr/local/app/{{ project-name }}"]

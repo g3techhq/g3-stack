@@ -20,7 +20,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
+export const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 // Build output, dependencies, and version control. Walking into `target`
 // would take minutes and rewrite nothing that matters.
@@ -53,10 +53,12 @@ const TEXT_EXTENSIONS = new Set([
   ".sh",
 ]);
 
-const NO_EXTENSION_FILES = new Set(["Dockerfile", "justfile", ".env.template", ".dockerignore"]);
+// Lower case: `isTextFile` compares lowercased names, which is why `Dockerfile`
+// used to be skipped.
+const NO_EXTENSION_FILES = new Set(["dockerfile", "justfile", ".env.template", ".dockerignore"]);
 
-// This script and its test mention the template's own names on purpose.
-const SELF = new Set(["rename.mjs", "rename.test.mjs"]);
+// These scripts and their tests mention the template's own names on purpose.
+const SELF = new Set(["rename.mjs", "rename.test.mjs", "template.mjs", "template.test.mjs"]);
 
 export function toKebab(name) {
   return name
@@ -111,7 +113,7 @@ function parseArgs(argv) {
   return { positional, flags };
 }
 
-function walk(dir, out = []) {
+export function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue;
     const path = join(dir, entry);
@@ -124,7 +126,7 @@ function walk(dir, out = []) {
   return out;
 }
 
-function isTextFile(path) {
+export function isTextFile(path) {
   const name = path.split(/[/\\]/).pop().toLowerCase();
   if (SELF.has(name)) return false;
   if (NO_EXTENSION_FILES.has(name)) return true;

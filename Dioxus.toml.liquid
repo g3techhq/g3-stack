@@ -1,0 +1,42 @@
+[application]
+name = "{{ project-name }}"
+asset_dir = "assets"
+default_platform = "web"
+out_dir = "dist"
+
+tailwind_input = "tailwind.css"
+tailwind_output = "assets/tailwind.css"
+
+[web.app]
+title = "{{ project-name | title_case }}"
+
+[web.watcher]
+reload_html = true
+watch_path = ["src", "assets"]
+
+# No `[web.resource] style` entry for the stylesheet. That writes a bare
+# `<link>` to a path `dx bundle` never copies, so a deployed build requests a
+# file that is not there. `asset!()` in src/app.rs links the real, hashed one.
+
+[bundle]
+identifier = "{% if bundle_id != "" %}{{ bundle_id }}{% else %}com.example.{{ project-name | remove: "-" }}{% endif %}"
+publisher = "Example"
+icon = ["assets/logo.svg"]
+category = "Productivity"
+short_description = "An app built on the g3 stack."
+long_description = "A starter application built with Dioxus, SurrealDB, g3-ui, g3-native-plugins, and g3-route-transitions."
+
+# Universal links / App Links. Point these at the domains you actually own,
+# then serve the matching association files. The paths listed here are the
+# ones the OS will hand to the app instead of the browser.
+[deep_links]
+hosts = ["app.example.com"]
+paths = ["/notes/*"]
+
+[ios]
+deployment_target = "15.0"
+
+[android]
+min_sdk = 35
+target_sdk = 35
+compile_sdk = 35

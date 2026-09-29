@@ -3,6 +3,11 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 default:
     @just --list
 
+# Template repository only: rewrite the `.liquid` twins `dx new` renders,
+# after changing a file that carries the app's name. CI checks they are current.
+template:
+    node scripts/template.mjs
+
 # One-time setup after cloning.
 setup:
     npm install

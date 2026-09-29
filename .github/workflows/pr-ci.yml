@@ -88,7 +88,57 @@ jobs:
         if: matrix.test
         run: cargo test ${{ matrix.cargo-args }}
 
-  web-tooling:
+  # This repository is also the `dx new` template. Check that the twins match
+  # their plain files, then generate a project the way `dx new` would and
+  # type-check it under its new name. Skipped in a generated project, which
+  # has no template config.
+  template:
+    name: Template
+    if: hashFiles('cargo-generate.toml') != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Template twins are current
+        run: node scripts/template.mjs --check
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: template
+          workspaces: ${{ runner.temp }}/trail-notes
+
+      # The cargo-generate that `dx` 0.7.9 embeds, so this renders exactly
+      # what `dx new` does.
+      - uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
+      - name: Install cargo-generate
+        run: cargo binstall --no-confirm cargo-generate@0.23.10
+
+      - name: Generate a project
+        run: >
+          cargo generate --path . --name trail-notes --silent
+          --destination "${{ runner.temp }}" --define bundle_id=dev.example.trailnotes
+
+      - name: The new name reached every file
+        working-directory: ${{ runner.temp }}/trail-notes
+        run: |
+          grep -q 'name = "trail-notes"' Cargo.toml
+          grep -q 'identifier = "dev.example.trailnotes"' Dioxus.toml
+          ! grep -rn --exclude-dir=.git --exclude-dir=docs --exclude-dir=scripts -e 'g3-app' -e 'g3_app' .             | grep -v 'g3-app-shell' | grep -v '^./Cargo.lock' | grep -v '^./package-lock.json'
+          ! ls *.liquid cargo-generate.toml 2> /dev/null
+
+      - name: Check the generated project
+        working-directory: ${{ runner.temp }}/trail-notes
+        run: |
+          touch assets/tailwind.css
+          cargo check
+          cargo check --no-default-features --features server
+
     name: Formatting, scripts, and spelling
     runs-on: ubuntu-latest
 

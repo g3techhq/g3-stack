@@ -72,7 +72,11 @@ mod tests {
         assert!(guard.allows_signed_out("/signin"));
         assert!(guard.allows_signed_out("/api/v1/is_signed_in"));
         // The client bundle loads before there is a session.
-        assert!(guard.allows_signed_out("/wasm/g3-app_bg.wasm"));
+        assert!(guard.allows_signed_out(concat!(
+            "/wasm/",
+            env!("CARGO_PKG_NAME"),
+            "_bg.wasm"
+        )));
         assert!(guard.allows_signed_out("/assets/tailwind.css"));
         assert!(guard.allows_signed_out("/favicon.ico"));
 

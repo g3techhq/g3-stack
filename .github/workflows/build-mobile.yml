@@ -87,7 +87,7 @@ jobs:
       - name: Upload Android artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: g3-app-android-${{ github.sha }}
+          name: ${{ github.event.repository.name }}-android-${{ github.sha }}
           path: artifacts/android/
           if-no-files-found: error
           retention-days: 14
@@ -142,7 +142,7 @@ jobs:
       - name: Upload iOS artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: g3-app-ios-${{ github.sha }}
+          name: ${{ github.event.repository.name }}-ios-${{ github.sha }}
           path: artifacts/ios/
           if-no-files-found: error
           retention-days: 14
