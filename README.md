@@ -47,21 +47,33 @@ cargo binstall dioxus-cli@0.7.9 just
 Then:
 
 ```bash
-git clone https://github.com/g3techhq/g3-stack my-app
+dx new my-app --template gh:g3techhq/g3-stack
 cd my-app
-node scripts/rename.mjs "My App"   # crate name, bundle id, database namespace
 cp .env.template .env
 just setup                         # npm install + git hooks
 just db-up                         # SurrealDB in Docker
 just dev                           # http://localhost:8080
 ```
 
+`dx new` names everything after `my-app`: the crate and binary, the title,
+the database namespace, the container, and the bundle identifier, which it asks
+for (leave it empty for `com.example.myapp`). Add `--yes` to take the
+defaults without asking.
+
 Open <http://localhost:8080> and press **Continue as guest**. The first build
 compiles the whole stack for two targets and takes a few minutes; after that,
 `dx` hot-reloads.
 
-> On GitHub, **Use this template** gives you a fresh repository without this
-> one's history. Then clone yours and continue from `rename.mjs`.
+> Cloning works too: `git clone`, then `node scripts/rename.mjs "My App"`
+> does the same renaming.
+
+## Working on the template
+
+This repository is the app `dx new` produces, under the template's own name,
+so it builds, runs and tests like any app. The files that carry the name each
+have a `.liquid` twin, which `dx new` renders in its place. The twins are generated:
+change the plain file, then run `just template`. CI fails when a twin is out of
+date, and generates a project from the template and checks it.
 
 ## What's inside
 
