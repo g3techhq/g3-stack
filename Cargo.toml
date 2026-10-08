@@ -72,7 +72,7 @@ dotenv = { version = "0.15", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"], optional = true }
 
 [target.'cfg(target_os="android")'.dependencies]
-jni = "0.21.0"
+jni = "0.22.4"
 
 [features]
 default = ["web"]
