@@ -161,8 +161,9 @@ layout open.
 ## Mobile
 
 **Sign-in works, every call after it is a 401**
-The session cookie is not being kept. `dioxus_cookie::init()` must run in
-`main` before `dioxus::launch`, and the `mobile` feature must be enabled.
+The session cookie is not being kept. `g3_auth::init()` must run in
+`main` before `dioxus::launch`, and the `mobile` feature must enable
+`g3-auth/mobile`.
 
 **The app cannot reach the server on a device**
 `localhost` on a phone is the phone. In development, `dx serve --platform ..`

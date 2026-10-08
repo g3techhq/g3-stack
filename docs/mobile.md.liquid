@@ -57,13 +57,13 @@ to every call.
 ### Cookies
 
 The session is a cookie. A browser keeps cookies; a native HTTP client does not.
-`dioxus-cookie` (enabled by the `mobile` feature) stores them in the Keychain on
-iOS and the Keystore on Android, and `main` calls `dioxus_cookie::init()` before
-launch. Without it, sign-in succeeds and every following call is a 401.
+g3-auth's `mobile` feature (enabled by this app's `mobile` feature) stores them in
+the Keychain on iOS and the Keystore on Android, and `main` calls
+`g3_auth::init()` before launch. Without it, sign-in succeeds and every following
+call is a 401, and a relaunch signs everyone out.
 
-On a simulator or emulator whose keychain is unavailable, the `mobile-sim`
-feature falls back to an encrypted file. That fallback is compiled out of release
-builds.
+On a simulator or emulator whose keychain is unavailable it falls back to an
+encrypted file. That fallback is compiled out of release builds.
 
 ### Signed-out launches
 

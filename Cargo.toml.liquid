@@ -38,7 +38,7 @@ g3-native-plugins = { version = "0.4.2", features = [
 ] }
 # Sessions, the signed-in user, and a guard that denies by default; see
 # src/auth/session.rs. The `server` feature below turns its server side on.
-g3-auth = "0.1.1"
+g3-auth = "0.1.2"
 # The screen cache on the device, server caches, and CDN headers for shared
 # reads. Enable its platform feature in each app feature below.
 g3-cache = "0.2.0"
@@ -57,14 +57,6 @@ strum_macros = "0.28.0"
 # Validates the mobile `SERVER_URL` (see `src/server_url.rs`). Already in the
 # dependency tree through the database client, so this costs nothing extra.
 url = "2.5"
-
-# --- Mobile only ----------------------------------------------------------
-# A phone has no browser cookie jar. Without this, the session cookie that
-# `sign_in_guest` sets is dropped on the floor and every later call from a
-# native build comes back 401. `mobile-sim` adds an encrypted-file fallback
-# for simulators and emulators whose keychain is unavailable; the fallback is
-# compiled out of release builds.
-dioxus-cookie = { version = "0.2", default-features = false, optional = true }
 
 # --- Server only ----------------------------------------------------------
 surrealdb = { version = "=3.2.4", optional = true }
@@ -93,7 +85,8 @@ web = [
 mobile = [
     "dioxus/mobile",
     "g3-cache/mobile",
-    "dioxus-cookie/mobile-sim",
+    # Keeps the session cookie across launches (Keychain / Keystore).
+    "g3-auth/mobile",
     "tokio",
 ]
 

@@ -3015,7 +3015,6 @@ dependencies = [
  "cfg-if",
  "chrono",
  "dioxus",
- "dioxus-cookie",
  "dioxus-fullstack",
  "dioxus-icons",
  "dotenv",
@@ -3042,9 +3041,9 @@ dependencies = [
 
 [[package]]
 name = "g3-auth"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39bc034a49ab69aafcd7b53fb813e8e4a6304d08270416f0c80f05ba6eb8c00e"
+checksum = "d51b298319aeb608599aae12ab4feb0ecf0b238bce72fb38f815b67d66c34c46"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3052,6 +3051,7 @@ dependencies = [
  "axum_session",
  "axum_session_auth",
  "chrono",
+ "dioxus-cookie",
  "g3-auth-macros",
  "inventory",
  "surrealdb",

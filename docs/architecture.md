@@ -97,7 +97,7 @@ look like the server fault it is.
 
 A web client calls the origin that served it. A mobile client has no origin, so
 `src/server_url.rs` compiles one in from `SERVER_URL` — validated as an HTTPS
-bare origin in release builds — and `dioxus-cookie` gives it a cookie jar so the
+bare origin in release builds — and `g3_auth::init()` gives it a persistent cookie jar so the
 session survives between calls. See [mobile.md](mobile.md).
 
 ---
