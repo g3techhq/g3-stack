@@ -1,6 +1,6 @@
 # g3-ui reference
 
-The components the template builds with, and their props, as of `g3-ui` 0.4.4
+The components the template builds with, and their props, as of `g3-ui` 0.5.1
 with the `transitions` feature. Written so you (or your coding agent) can build
 a screen without guessing. The full reference is
 [docs.rs/g3-ui](https://docs.rs/g3-ui), and the
@@ -152,3 +152,10 @@ The 0.3 → 0.4 renames (`Body` → `Content`, `Navbar` → `TabLayout`,
 `--g3-color-*` ..) are in the crate's CHANGELOG. When a new version lands,
 read its CHANGELOG, bump the version, and let `just check` list the call
 sites.
+
+0.4 → 0.5 adds, and changes only what is noted: a `Theme` built as a full struct
+literal (without `..Theme::default_light()`) needs the new `accent_secondary`,
+`look` and `look_dark` fields, where `Look::default()` and `None` keep the
+platform look; `NavRail` and `AdaptiveNav` rails start expanded, so pass
+`default_expanded: false` to keep icons only; and a `g3-route-transitions` of at
+least 0.4.3 is required.

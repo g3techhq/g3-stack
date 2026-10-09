@@ -3150,9 +3150,9 @@ dependencies = [
 
 [[package]]
 name = "g3-ui"
-version = "0.4.4"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbdc222b2933582ded1cd11beeef87ce049ba3c06979cbc7f3b55996206a3a09"
+checksum = "adf17b50e73ffa6301007d8171a20c2f23910af1594a4fc272300b85ba879020"
 dependencies = [
  "cfg-if",
  "dioxus",
