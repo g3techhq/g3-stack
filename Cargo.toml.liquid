@@ -68,7 +68,7 @@ axum_session = { version = "0.20.1", optional = true }
 axum_session_auth = { version = "0.20.0", optional = true }
 anyhow = { version = "1.0", optional = true }
 async-trait = { version = "0.1", optional = true }
-dotenv = { version = "0.15", optional = true }
+dotenvy = { version = "0.15.7", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"], optional = true }
 
 [target.'cfg(target_os="android")'.dependencies]
@@ -103,7 +103,7 @@ server = [
     "axum_session_auth",
     "anyhow",
     "async-trait",
-    "dotenv",
+    "dotenvy",
     "rustls",
 ]
 
