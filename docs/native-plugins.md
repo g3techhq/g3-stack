@@ -85,7 +85,11 @@ three plugins.
 ### Results arrive by polling
 
 Plugins whose answer comes back later — sign-in, location, purchases — use
-start-and-poll rather than `async`:
+start-and-poll rather than `async`. (For Google and Apple sign-in you do not
+write this loop: `g3_auth::google::GoogleSignIn` and `g3_auth::apple::AppleSignIn`
+run it and post the credential to the server; see
+[authentication.md](authentication.md). The shape is the same for any plugin
+you add.)
 
 ```rust
 let challenge = prepare_apple_signin(true, None).await?;

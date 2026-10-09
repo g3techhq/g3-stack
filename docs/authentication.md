@@ -106,108 +106,83 @@ pub async fn create_tag(label: String) -> Result<Tag> {
 ## Adding a sign-in method
 
 The session machinery stays as it is. What changes is how an account is found.
+Google and Apple are `g3-auth` features, so the button, the callback, the token
+checks and the CSRF protection are not yours to write:
 
-1. **A field to find the account by**, with a unique index, in
-   `database/schema/user.surql`:
-
-   ```surql
-   DEFINE FIELD IF NOT EXISTS apple_id ON user TYPE option<string>;
-   DEFINE INDEX IF NOT EXISTS user_apple_id_idx ON user FIELDS apple_id UNIQUE;
-   ```
-
-2. **A one-time server challenge** issued before the provider UI opens. Store a
-   random state and expected nonce in the visitor's server session for no more
-   than ten minutes, return the raw values to the client, and consume the
-   record on the callback. On iOS, pass both to
-   `start_apple_auth(&state, &nonce)`; the native plugin hashes the nonce before
-   placing it on Apple's request.
-
-3. **A callback** that verifies the credential, finds or creates the `user`
-   row, and signs in:
-
-   ```rust
-   #[post("/api/v1/apple_signin_callback", crate::StateExtractor { db, auth_session, .. }: crate::StateExtractor)]
-   pub async fn sign_in_apple(credential: AppleCredential) -> Result<User> {
-       let challenge = consume_apple_challenge(&auth_session)?;
-       ensure!(credential.state == challenge.state, "state mismatch");
-       let token = exchange_apple_authorization_code(
-           &credential.authorization_code,
-           APPLE_CLIENT_ID,
-       ).await?;
-       let apple_id = verify_apple_identity_token(
-           &token,
-           APPLE_CLIENT_ID,
-           &challenge.expected_nonce,
-       ).await?;
-       let user = find_or_create_user_by_apple_id(&db, apple_id).await?;
-       auth_session.login_user(user.id.key.to_sql());
-       auth_session.remember_user(true);
-       Ok(user)
-   }
-   ```
-
-   Check Apple's RS256 signature against the matching `kid`, issuer, audience,
-   expiration, and nonce. Exchange the single-use authorization code at
-   Apple's token endpoint using an ES256 client-secret JWT made from
-   `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and a server-only `.p8` private key. Use the
-   stable `sub` claim as the account key. A token the client says is valid is
-   still just a string.
-
-4. **`#[g3_auth::public]` on its endpoints.** A sign-in endpoint that requires a
-   session cannot be reached.
-
-5. **A button on `SignIn`.** On a phone, the credential comes from the
-   `g3-native-plugins` `auth` feature — Sign in with Apple on iOS, Google
-   Sign-In on Android. See [native-plugins.md](native-plugins.md). On success,
-   call `app_state.apply_user(user)` and `animated_navigate` to the app, the
-   way the guest button does.
-
-For web, use Sign in with Apple JS in popup mode, pass the same server-issued
-state and nonce, and post the returned `code`, `id_token`, `state`, and
-first-login `user` object to the callback. Register every exact HTTPS return
-URL against the Services ID. A popup lets the app perform the final POST from
-its own origin, so a normal SameSite session cookie still binds the callback to
-the challenge that started it.
-
-### Google sign-in on the web
-
-Let Google render the web button with the Google Identity Services JavaScript
-API. Do not put a custom button in front of `google.accounts.id.prompt()`:
-`prompt()` is the One Tap API, not a custom-button sign-in action. Do not mix
-the HTML `g_id_onload` configuration with JavaScript `initialize()` or
-`renderButton()` calls either.
-
-Render an empty, full-width container in the sign-in component. After the
-Google script loads, initialize redirect mode once and render Google's button
-into that container:
-
-```javascript
-const container = document.getElementById("google-signin-button");
-
-google.accounts.id.initialize({
-  client_id: container.dataset.clientId,
-  ux_mode: "redirect",
-  login_uri: new URL(
-    "/api/v1/google_signin_callback",
-    window.location.origin,
-  ).href,
-});
-google.accounts.id.renderButton(container, {
-  type: "standard",
-  theme: "outline",
-  size: "large",
-  text: "continue_with",
-  shape: "rectangular",
-  logo_alignment: "left",
-  width: Math.floor(container.getBoundingClientRect().width),
-});
+```toml
+g3-auth = { version = "0.1", features = ["google", "apple"] }
 ```
 
-The absolute `login_uri` is required by Google in deployed environments. Using
-`window.location.origin` keeps a single web bundle valid on localhost, staging,
-and production. The outline, large, rectangular, full-container configuration
-is the closest supported match to a full-width neutral g3-ui button; Google's
-iframe still owns its internal typography, spacing, and branding.
+1. **A way to find the account**, in `database/schema/user.surql`, with a unique
+   index (`google_id`, `apple_id`, or an `identity` table keyed on provider and
+   subject if you want several). Key on the provider's stable `subject`, never
+   on the email.
+
+2. **Load the schemas.** Copy `g3_auth::APPLE_SCHEMA` into
+   `database/schema/apple_challenge.surql` beside `sessions.surql`: each Apple
+   attempt starts with a single-use `state` and `nonce` kept there for ten
+   minutes.
+
+3. **Say how an identity becomes a `user`** by implementing `GoogleAccounts`
+   and `AppleAccounts` (one `find_or_create` each), and merge the routers
+   **before** the session layers in `main.rs`:
+
+   ```rust
+   let router = dioxus::server::router(app::App)
+       .merge(g3_auth::google::google_router::<auth::AppUser, Client, _>(
+           GoogleConfig::new("/", "/welcome"),
+           auth::Accounts,
+       ))
+       .merge(g3_auth::apple::apple_router::<auth::AppUser, Client, _>(
+           AppleConfig::new("/", "/welcome").native_client_id("com.example.app"),
+           auth::Accounts,
+       ))
+       .layer(/* extension, guard, auth session, session store */);
+   ```
+
+   Link to an existing account by email only when the provider says the email
+   is verified (`email_verified`); an unverified one must never take over an
+   account.
+
+4. **Buttons on `SignIn`:** `GoogleSignIn {}` and `AppleSignIn {}`. On the web
+   they start the provider's redirect flow and the server redirects the browser
+   when it is done; on a phone they use the system sheet (Google on Android,
+   Apple on iOS) and call `on_signed_in`, where you call
+   `app_state.apply_user(user)` and `animated_navigate` the way the guest button
+   does. iOS also needs the Sign in with Apple capability, and an app that
+   offers Google on iOS must offer Apple.
+
+5. **Delete means revoke.** With an Apple signing key configured, `AppleIdentity`
+   carries a refresh token; keep it with the account and call
+   `g3_auth::apple::revoke_token(client_id, refresh_token)` from
+   `delete_account`, or App Store review (guideline 5.1.1(v)) can reject the
+   app.
+
+### What `g3-auth` checks for you
+
+- **Login CSRF.** Both providers post a signed token from their own page, where
+  the `SameSite=Lax` session cookie is not sent, so nothing but the provider's
+  cookie ties the post to the browser that started it. A browser post (it
+  carries `Origin`) must have a cookie equal to its form field: `g_csrf_token`
+  for Google, an `apple_state` cookie the Apple button sets for `state`. Without
+  it a page could sign a visitor in as the attacker's own account. A native
+  app's post has no `Origin` and no cookie jar, and is let through. Do the same
+  with `g3_auth::csrf::protect` for any callback you add.
+- **Apple's token.** Signature against Apple's keys, issuer, audience, expiry and
+  the attempt's nonce; the challenge is consumed once. With
+  `APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY` the authorization code
+  is exchanged with Apple too.
+- **A token the client says is valid is still just a string**, so never
+  trust one you did not verify.
+
+### One JWT backend
+
+If your own code uses `jsonwebtoken` (an App Store or Play check, say), enable
+its **`aws_lc_rs`** feature, not `rust_crypto`. SurrealDB already turns on
+`aws_lc_rs` in the same dependency graph, and with both on `jsonwebtoken` panics
+on first use ("Could not automatically determine the process-level
+CryptoProvider"). A debug build compiles fine and the first request that signs
+or verifies a token fails.
 
 ### OAuth configuration is build-time and runtime
 
