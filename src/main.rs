@@ -33,7 +33,7 @@ fn main() {
     // Release builds read the environment the deployment gives them; only
     // local development goes looking for a file.
     #[cfg(debug_assertions)]
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
 
     dioxus::serve(|| async move {
         let db = Arc::new(
