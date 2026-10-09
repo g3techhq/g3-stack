@@ -90,11 +90,12 @@ jobs:
 
   # This repository is also the `dx new` template. Check that the twins match
   # their plain files, then generate a project the way `dx new` would and
-  # type-check it under its new name. Skipped in a generated project, which
-  # has no template config.
+  # type-check it under its new name. Only in the template's own repository:
+  # a generated project has no template to check. (`hashFiles` would say so
+  # more directly, but a job-level `if` cannot call it.)
   template:
     name: Template
-    if: hashFiles('cargo-generate.toml') != ''
+    if: github.repository == 'g3techhq/g3-stack'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -102,35 +103,57 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          # The whole history, so the git clone below can find this commit.
+          fetch-depth: 0
 
       - name: Template twins are current
         run: node scripts/template.mjs --check
 
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
+      # The cargo-generate that `dx` 0.7.9 embeds: 0.23.3, not the newer one the
+      # Dioxus repository pins today. They differ in how a git template's
+      # `.liquid` files are matched.
+      - uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
+      - name: Install cargo-generate
+        run: cargo binstall --no-confirm cargo-generate@0.23.3
+
+      # From git, as `dx new --template gh:g3techhq/g3-stack` does, rather than
+      # from the folder, which cargo-generate reads differently.
+      # A pull request checks out a merge commit that no branch points at, and
+      # a clone only carries what a ref reaches, so give it one.
+      - name: Make the checked-out commit reachable
+        run: git branch ci-template HEAD
+
+      - name: Generate a project
+        run: >
+          cargo generate --git "file://${{ github.workspace }}" --revision "${{ github.sha }}"
+          --name trail-notes --silent
+          --destination "${{ runner.temp }}" --define bundle_id=dev.example.trailnotes
+
+      # After generating: restoring the cache creates the project's folder, and
+      # `cargo generate` refuses a target that already exists.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: template
           workspaces: ${{ runner.temp }}/trail-notes
-
-      # The cargo-generate that `dx` 0.7.9 embeds, so this renders exactly
-      # what `dx new` does.
-      - uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
-      - name: Install cargo-generate
-        run: cargo binstall --no-confirm cargo-generate@0.23.10
-
-      - name: Generate a project
-        run: >
-          cargo generate --path . --name trail-notes --silent
-          --destination "${{ runner.temp }}" --define bundle_id=dev.example.trailnotes
 
       - name: The new name reached every file
         working-directory: ${{ runner.temp }}/trail-notes
         run: |
           grep -q 'name = "trail-notes"' Cargo.toml
           grep -q 'identifier = "dev.example.trailnotes"' Dioxus.toml
-          ! grep -rn --exclude-dir=.git --exclude-dir=docs --exclude-dir=scripts -e 'g3-app' -e 'g3_app' .             | grep -v 'g3-app-shell' | grep -v '^./Cargo.lock' | grep -v '^./package-lock.json'
-          ! ls *.liquid cargo-generate.toml 2> /dev/null
+          # `if`, not `!`: bash's errexit ignores a negated command, so
+          # `! grep ..` could never fail the step. rename.mjs and this workflow
+          # name the template on purpose; the lockfiles fix themselves on the
+          # first build.
+          if grep -rnE --exclude-dir=.git --exclude-dir=.github --exclude-dir=scripts \
+            'g3-app($|[^-])|g3_app|g3app' . | grep -v -e '^./Cargo.lock' -e '^./package-lock.json'; then
+            echo "The template's own name is left in the files above." && exit 1
+          fi
+          if ls *.liquid cargo-generate.toml 2> /dev/null; then
+            echo "Template files were copied into the project." && exit 1
+          fi
 
       - name: Check the generated project
         working-directory: ${{ runner.temp }}/trail-notes
@@ -139,6 +162,7 @@ jobs:
           cargo check
           cargo check --no-default-features --features server
 
+  web-tooling:
     name: Formatting, scripts, and spelling
     runs-on: ubuntu-latest
 

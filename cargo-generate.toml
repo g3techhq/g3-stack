@@ -10,19 +10,28 @@
 
 [template]
 cargo_generate_version = ">=0.23"
-# The twins' paths once `.liquid` is dropped, which is when cargo-generate
-# matches them. Written by `just template`.
+# Each twin under both names: cargo-generate matches a local template after
+# dropping `.liquid`, and a git one before. Written by `just template`.
 # BEGIN twins
 include = [
   ".env.surrealkit.template",
+  ".env.surrealkit.template.liquid",
   ".env.template",
+  ".env.template.liquid",
   "Cargo.toml",
+  "Cargo.toml.liquid",
   "Dioxus.toml",
+  "Dioxus.toml.liquid",
   "Dockerfile",
+  "Dockerfile.liquid",
   "compose.yml",
+  "compose.yml.liquid",
   "docs/mobile.md",
+  "docs/mobile.md.liquid",
   "docs/troubleshooting.md",
+  "docs/troubleshooting.md.liquid",
   "package.json",
+  "package.json.liquid",
 ]
 # END twins
 # About the template itself, not the app it becomes.
