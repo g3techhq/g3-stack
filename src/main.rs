@@ -100,8 +100,7 @@ fn main() {
     // Before launch, and before anything can make a request: a native build
     // has no cookie jar of its own, so without this the session cookie from
     // signing in never comes back on the next call.
-    #[cfg(feature = "mobile")]
-    dioxus_cookie::init();
+    g3_auth::init();
 
     server_url::configure();
     dioxus::launch(App);
