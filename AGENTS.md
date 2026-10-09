@@ -43,6 +43,12 @@ docs/                   Human and agent documentation; docs/dioxus/ for the fram
 tests/ui/               Playwright smoke tests
 ```
 
+**These files are the stack's shared code.** `build.rs`, `src/health.rs`,
+`src/server_url.rs`, `src/api_errors.rs` and `src/components/shared/error_message.rs`
+are the same in every app built on it (media-mancer, greenside-partee,
+swift-circuits), without being a crate. A change to one goes here first, then is
+copied to the apps, so a new project and an old one never differ by accident.
+
 `src/db/note.rs` + `src/components/notes/` + `database/schema/note.surql` are
 the worked example of a feature end to end: a table, cached reads, an
 optimistic mutation, and the `DataChange` it reports. Copy their shape.
