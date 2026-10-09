@@ -111,11 +111,6 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          shared-key: template
-          workspaces: ${{ runner.temp }}/trail-notes
-
       # The cargo-generate that `dx` 0.7.9 embeds: 0.23.3, not the newer one the
       # Dioxus repository pins today. They differ in how a git template's
       # `.liquid` files are matched.
@@ -135,6 +130,13 @@ jobs:
           cargo generate --git "file://${{ github.workspace }}" --revision "${{ github.sha }}"
           --name trail-notes --silent
           --destination "${{ runner.temp }}" --define bundle_id=dev.example.trailnotes
+
+      # After generating: restoring the cache creates the project's folder, and
+      # `cargo generate` refuses a target that already exists.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: template
+          workspaces: ${{ runner.temp }}/trail-notes
 
       - name: The new name reached every file
         working-directory: ${{ runner.temp }}/trail-notes
