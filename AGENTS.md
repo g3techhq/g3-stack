@@ -200,7 +200,10 @@ pub async fn create_note(title: String, body: String) -> Result<Note> { .. }
 - **Bind values** with `.bind(("name", value))`. Never `format!` into a query.
 - Validation is a plain `fn` in the same file, called by both the form and the
   server function, with unit tests.
-- Errors: `dioxus::CapturedError::msg("Human-readable message.")`.
+- Errors: a refusal written for the user is `crate::api_errors::user_error("Human-readable message.")`
+  (a 400 that keeps its words). Any other `Err`, including a `?` on the database, is a
+  fault: `api_errors::suppress_server_errors` logs it and sends the client only its code, and
+  `components::shared::error_message` words it there. Never put a diagnostic in a message.
 - Endpoints and pages are guarded by default. Marking one `#[g3_auth::public]`
   (server function) or `#[public]` (a `Route` variant) is a security decision:
   only for what must work signed out, with a comment saying why.

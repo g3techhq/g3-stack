@@ -122,7 +122,7 @@ pub async fn list_tags() -> Result<Vec<Tag>> {
 
 #[post("/api/v1/create_tag", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
 pub async fn create_tag(label: String) -> Result<Tag> {
-    let label = validate_tag(&label).map_err(dioxus::CapturedError::msg)?;
+    let label = validate_tag(&label).map_err(crate::api_errors::user_error)?;
 
     db.create("tag")
         .content(CreateTag {
@@ -144,6 +144,12 @@ The rules, all demonstrated in `src/db/note.rs`:
   `None` for "not yours", so the answer does not confirm the id exists.
 - **Bind, never format.** `format!` into SurrealQL is an injection.
 - **`#[get]` for reads, `#[post]` for writes.**
+- **A refusal is `user_error`; everything else is a fault.** `user_error("Label is too long.")`
+  goes out as a 400 and the client shows those words. A `?` on the database or a
+  `CapturedError::msg("Could not save the tag.")` is a fault: the server logs it and the
+  client gets only a 5xx code, which `error_message` turns into "Something went wrong."
+  Diagnostics never reach the browser, and a message you wrote for the user never needs to
+  be guessed at.
 - **Unit-test the validation.** It is a plain function; see the tests at the
   bottom of `note.rs`.
 

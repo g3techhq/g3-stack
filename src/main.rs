@@ -1,3 +1,6 @@
+// `user_error_logged` is for refusals whose cause belongs in the log.
+#[cfg_attr(feature = "server", allow(dead_code))]
+mod api_errors;
 mod app;
 mod auth;
 mod components;
@@ -14,7 +17,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "server")] {
 
 use std::sync::Arc;
 
-use axum::middleware::from_fn_with_state;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum_session::{SessionConfig, SessionLayer, SessionStore};
 use axum_session_auth::AuthConfig;
 use dioxus::server::axum::Extension;
@@ -83,6 +86,9 @@ fn main() {
             // layer adds to a response marked `#[cache_shared(cdn = ..)]`, and
             // marks every other API response `private, no-cache`.
             .layer(g3_cache::cdn_cache_guard("/api"))
+            // A server fault is logged here and the client gets only its code;
+            // a refusal written for the user (`api_errors::user_error`) keeps its words.
+            .layer(from_fn(api_errors::suppress_server_errors))
             // Merged, not layered, and merged last: `Router::layer` only wraps
             // routes registered before it, so probes reaching the app this way
             // skip the session and auth layers entirely. A health check should

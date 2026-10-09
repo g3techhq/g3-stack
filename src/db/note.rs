@@ -92,7 +92,7 @@ pub async fn get_note(id: String) -> Result<Option<Note>> {
 
 #[post("/api/v1/create_note", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
 pub async fn create_note(title: String, body: String) -> Result<Note> {
-    let (title, body) = validate_note(&title, &body).map_err(dioxus::CapturedError::msg)?;
+    let (title, body) = validate_note(&title, &body).map_err(crate::api_errors::user_error)?;
 
     db.create("note")
         .content(CreateNote {
@@ -109,7 +109,7 @@ pub async fn create_note(title: String, body: String) -> Result<Note> {
 
 #[post("/api/v1/update_note", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
 pub async fn update_note(id: String, title: String, body: String) -> Result<Note> {
-    let (title, body) = validate_note(&title, &body).map_err(dioxus::CapturedError::msg)?;
+    let (title, body) = validate_note(&title, &body).map_err(crate::api_errors::user_error)?;
 
     db.query(
         "UPDATE $note SET title = $title, body = $body, updated_at = time::now()
@@ -121,7 +121,7 @@ pub async fn update_note(id: String, title: String, body: String) -> Result<Note
     .bind(("body", body))
     .await?
     .take::<Option<Note>>(0)?
-    .ok_or_else(|| dioxus::CapturedError::msg("That note no longer exists."))
+    .ok_or_else(|| crate::api_errors::user_error("That note no longer exists."))
 }
 
 #[post("/api/v1/set_note_pinned", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
@@ -132,7 +132,7 @@ pub async fn set_note_pinned(id: String, pinned: bool) -> Result<Note> {
         .bind(("pinned", pinned))
         .await?
         .take::<Option<Note>>(0)?
-        .ok_or_else(|| dioxus::CapturedError::msg("That note no longer exists."))
+        .ok_or_else(|| crate::api_errors::user_error("That note no longer exists."))
 }
 
 #[post("/api/v1/delete_note", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
