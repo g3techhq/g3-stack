@@ -125,6 +125,11 @@ jobs:
 
       # From git, as `dx new --template gh:g3techhq/g3-stack` does, rather than
       # from the folder, which cargo-generate reads differently.
+      # A pull request checks out a merge commit that no branch points at, and
+      # a clone only carries what a ref reaches, so give it one.
+      - name: Make the checked-out commit reachable
+        run: git branch ci-template HEAD
+
       - name: Generate a project
         run: >
           cargo generate --git "file://${{ github.workspace }}" --revision "${{ github.sha }}"

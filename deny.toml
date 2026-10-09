@@ -19,6 +19,8 @@ allow = [
     "ISC",
     "MIT",
     "MPL-2.0",
+    # libfuzzer-sys, reached through the image crates (rav1e).
+    "NCSA",
     "Unicode-3.0",
     "Zlib",
 ]
