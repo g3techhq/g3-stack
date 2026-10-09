@@ -2,7 +2,13 @@
 all-features = false
 
 [advisories]
-ignore = []
+ignore = [
+    { id = "RUSTSEC-2023-0071", reason = "rsa timing side channel, no fix upstream; via surrealdb-core -> jsonwebtoken, not used for decryption here" },
+    { id = "RUSTSEC-2021-0141", reason = "dotenv is unmaintained; the server loads .env in development only. Move to dotenvy when convenient" },
+    { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained and finished; pulled in by the Dioxus desktop and Surreal dependency trees" },
+    { id = "RUSTSEC-2025-0057", reason = "fxhash is unmaintained; pulled in by the Dioxus desktop dependency tree" },
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error is unmaintained; a build-time macro dependency of the Linux desktop GTK stack" },
+]
 
 [licenses]
 allow = [
