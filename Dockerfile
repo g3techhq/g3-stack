@@ -1,6 +1,6 @@
 # Multi-stage build for the fullstack web server. `cargo-chef` caches the
 # dependency build so an app-code change does not recompile the whole tree.
-FROM rust:1 AS chef
+FROM rust:1.95-bookworm AS chef
 RUN cargo install cargo-chef
 
 # The Dioxus CLI produces the bundle.
@@ -26,13 +26,13 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json --locked
 COPY . .
 
 # No SERVER_URL here. The web client calls the origin that served it, so one
 # image works behind any hostname. Only mobile builds compile a URL in — see
 # src/server_url.rs.
-RUN dx bundle --platform web -r
+RUN dx bundle --platform web -r --locked --debug-symbols false
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
@@ -50,4 +50,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8080/api/v1/health/ready || exit 1
 
 WORKDIR /usr/local/app
-ENTRYPOINT ["/usr/local/app/g3-app"]
+# Dioxus 0.7.9 bundles the native executable as server.
+RUN test -x /usr/local/app/server && test -s /usr/local/app/public/index.html
+ENTRYPOINT ["/usr/local/app/server"]

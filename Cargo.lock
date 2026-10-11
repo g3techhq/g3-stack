@@ -3041,9 +3041,9 @@ dependencies = [
 
 [[package]]
 name = "g3-auth"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d51b298319aeb608599aae12ab4feb0ecf0b238bce72fb38f815b67d66c34c46"
+checksum = "e293b9902c574bcb9441cfb5124920c1a031b1032f4b28c23ad900fc62f3245b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3056,6 +3056,7 @@ dependencies = [
  "inventory",
  "surrealdb",
  "surrealdb-types",
+ "url",
 ]
 
 [[package]]
@@ -3071,9 +3072,9 @@ dependencies = [
 
 [[package]]
 name = "g3-cache"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c865f95bf50af958b2394960b5c3755b65fd09ba3c7dcb3669c2762ecd0216e1"
+checksum = "a5663d590bc9c1fecd3d3de3e0f24e2e9455c630af5c5ed34800840f5c6da6b6"
 dependencies = [
  "axum",
  "chrono",
@@ -3107,9 +3108,9 @@ dependencies = [
 
 [[package]]
 name = "g3-native-plugins"
-version = "0.4.2"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae3944f2b44025cf50a22cdffd115a6970ddf28e3be9aed3fa23c2e0dd3d722"
+checksum = "5445364bee78d6a02a8794faddacb72ab619728c23fef0b1334b64c9e1564bd2"
 dependencies = [
  "cfg-if",
  "dioxus",
@@ -3126,9 +3127,9 @@ dependencies = [
 
 [[package]]
 name = "g3-route-transitions"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09a786b893f5e8494cc17b0a962912bc14a3e7f7b8d3c5e8dd81b1f1f31c2423"
+checksum = "6237a984bc4082cf414a94ba4ec645f231fe597441d72d7306ce484a0f233192"
 dependencies = [
  "dioxus",
  "g3-native-plugins",
