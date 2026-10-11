@@ -1,6 +1,6 @@
 # Multi-stage build for the fullstack web server. `cargo-chef` caches the
 # dependency build so an app-code change does not recompile the whole tree.
-FROM rust:1.95-bookworm AS chef
+FROM rust:1.95.0-trixie AS chef
 RUN cargo install cargo-chef
 
 # The Dioxus CLI produces the bundle.
@@ -34,7 +34,7 @@ COPY . .
 # src/server_url.rs.
 RUN dx bundle --platform web -r --locked --debug-symbols false
 
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
