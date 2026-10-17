@@ -81,8 +81,9 @@ whether there is a session. See [authentication.md](authentication.md).
   the root. See [navigation.md](navigation.md).
 - **Mode.** The template defaults to iOS styling everywhere and lets the user
   switch in Settings. To follow the device instead, call
-  `g3_ui::init_auto_mode()` and `g3_route_transitions::init_auto_platform()`
-  and drop the stored preference.
+  `g3_ui::init_auto_mode()`, leave g3-route-transitions' platform unset (its
+  `platform()` falls back to `detect_platform()`), and drop the stored
+  preference.
 - **Safe areas and the keyboard.** g3-ui's shell pads for notches and the home
   indicator. Keep content inside `Body` and it is handled.
 

@@ -1,7 +1,9 @@
 use crate::{app::Route, components::NotesToolbar};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{NotebookPen, Plus, Settings as SettingsIcon};
-use g3_route_transitions::{RouteTransitionBaseRegion, RouteTransitionPage, animated_navigate};
+use g3_route_transitions::{
+    RouteTransitionBaseRegion, RouteTransitionPageRegion, animated_navigate,
+};
 use g3_ui::{
     AdaptiveNav, AdaptiveNavCompact, Button, ButtonFill, Content, ContentWidth, Header, NavItem,
     NavItemGroup, TabLayout,
@@ -12,7 +14,7 @@ use g3_ui::{
 /// tabs on a phone, a rail on a wide screen.
 ///
 /// Only the page transitions. The navigation sits outside
-/// [`RouteTransitionPage`], so it stays still while a page moves under it,
+/// [`RouteTransitionPageRegion`], so it stays still while a page moves under it,
 /// the way a native tab bar does.
 ///
 /// Pushed pages (`layer = stack_page`) render inside this shell too, with
@@ -64,7 +66,7 @@ pub fn AppShell() -> Element {
 
     rsx! {
         TabLayout { route_transition_base: false,
-            RouteTransitionPage {
+            RouteTransitionPageRegion {
                 if is_tab {
                     Header { title, toolbar, end }
                     RouteTransitionBaseRegion { class: "app-route-body",

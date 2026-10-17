@@ -14,7 +14,7 @@ your own domain.
 | --- | --- | --- |
 | Dioxus (fullstack, router) | 0.7.9, pinned `=` | [docs/dioxus/](docs/dioxus/README.md), [dioxuslabs.com/learn/0.7](https://dioxuslabs.com/learn/0.7/) |
 | g3-ui (components, theme) | 0.5 | [docs/g3-ui.md](docs/g3-ui.md) |
-| g3-route-transitions (navigation) | 0.4 | [docs/navigation.md](docs/navigation.md) |
+| g3-route-transitions (navigation) | 0.5 | [docs/navigation.md](docs/navigation.md) |
 | g3-native-plugins (device APIs) | 0.4 | [docs/native-plugins.md](docs/native-plugins.md) |
 | g3-auth (session guard, `#[public]`) | 0.1 | [docs/authentication.md](docs/authentication.md) |
 | g3-cache (client, server and CDN caches) | 0.2 | [docs/architecture.md](docs/architecture.md#data-and-the-caches) |

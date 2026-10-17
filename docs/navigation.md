@@ -2,7 +2,7 @@
 
 How screens connect, how they animate, and how Back works on every platform.
 The library doing the work is
-[`g3-route-transitions`](https://github.com/g3techhq/g3-route-transitions) 0.4
+[`g3-route-transitions`](https://github.com/g3techhq/g3-route-transitions) 0.5
 with the `native-back` feature; its README is the full reference.
 
 ---
@@ -41,7 +41,7 @@ routes change instantly.
 1. **Route metadata** decides *which* transition runs.
 2. **Snapshot regions** decide *what moves*. g3-ui places most of them
    (`AppWrapper` is the overlay, `TabLayout` the base, the rail persistent);
-   `AppShell` adds a `RouteTransitionPage` around each page.
+   `AppShell` adds a `RouteTransitionPageRegion` around each page.
 3. **Animated navigation** captures the old page before the route changes:
    `animated_navigate(route)` and `animated_back_or_navigate(fallback)`.
    `navigator().push(..)` and `go_back()` change the route first, so they skip
@@ -161,7 +161,8 @@ it. Back while one is open should close it rather than leave the page:
    history, by switching the hook in `RootLayout`:
 
    ```rust
-   use_native_back_navigation_with_interception::<Route>(g3_ui::open_sheet_count() > 0);
+   let sheet_open = use_memo(|| g3_ui::open_sheet_count() > 0);
+   use_native_back_navigation_with_layer::<Route>(sheet_open);
    ```
 
 2. **Close the topmost sheet when Back arrives.** The native plugin raises a

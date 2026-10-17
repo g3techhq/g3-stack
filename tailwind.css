@@ -27,7 +27,7 @@
 /* A tab's base region sits below the persistent header, so a filter change
    cross-fades only the content. Its library default is viewport height, for a
    standalone shell; here it takes the remaining row instead. */
-.route-transition-page > .app-route-body {
+.route-transition-page-region > .app-route-body {
   min-height: 0;
   flex: 1 1 auto;
 }

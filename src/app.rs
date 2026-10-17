@@ -259,7 +259,10 @@ mod transition_tests {
             filter: Some(NotesFilter::Pinned),
         };
 
-        assert_eq!(notes().transition_to(&pinned), NavigationTransition::None);
+        assert_eq!(
+            notes().transition_to(&pinned),
+            NavigationTransition::Instant
+        );
         assert!(notes().replaces_history(&pinned));
     }
 
