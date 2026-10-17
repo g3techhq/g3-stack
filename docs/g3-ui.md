@@ -1,6 +1,6 @@
 # g3-ui reference
 
-The components the template builds with, and their props, as of `g3-ui` 0.5.1
+The components the template builds with, and their props, as of `g3-ui` 0.6.0
 with the `transitions` feature. Written so you (or your coding agent) can build
 a screen without guessing. The full reference is
 [docs.rs/g3-ui](https://docs.rs/g3-ui), and the
@@ -62,7 +62,7 @@ rsx! {
 | Component | Key props | Notes |
 | --- | --- | --- |
 | `Stack` | `horizontal`, `gap: Space::{None, Xs, Sm, Md, Lg, Xl}`, `align: StackAlign`, `justify`, `wrap` | The default way to lay out children. Default gap is `Md`. |
-| `Grid` | `columns`, `wide_columns`, `gap`, `wide_gap` | Columns that change at the 48rem shell width. |
+| `Grid` | `columns`, `gap`, `medium_columns`, `medium_gap`, `expanded_columns`, `expanded_gap` | `columns` and `gap` below 48rem, `medium_*` from 48rem, `expanded_*` from 64rem; each falls back to the one below. |
 | `Text` | `variant: TextVariant::{Title, Heading, Body, Caption, Label, Overline}`, `tone: TextTone::{Primary, Secondary, Tertiary}`, `color: Color`, `truncate` | All copy. Supporting text is `Text { tone: TextTone::Secondary, .. }`. |
 | `Divider`, `ListHeader` | | Separators and headed groups inside a `List`. |
 
@@ -78,7 +78,7 @@ rsx! {
 | `Avatar` | `name` (required), `src`, `size` | People rows. Initials come from `name`. |
 | `Badge`, `Chip` | `color`; `selected`, `onclick` | Counts and statuses; filter and tag chips. |
 | `Shelf` | `title`, `end`, `snap` | A horizontal scroller of cards. |
-| `ReorderList` / `ReorderItem` / `ReorderHandle` | `onreorder: (from, to)`; `index`; `label` | Drag to reorder. |
+| `ReorderList` / `ReorderItem` / `ReorderHandle` | `on_reorder: ReorderEvent` (`from`, `to`, `.apply(&mut vec)`); `index`; `label` | Drag to reorder. |
 
 ## Actions and forms
 
@@ -159,3 +159,11 @@ literal (without `..Theme::default_light()`) needs the new `accent_secondary`,
 platform look; `NavRail` and `AdaptiveNav` rails start expanded, so pass
 `default_expanded: false` to keep icons only; and a `g3-route-transitions` of at
 least 0.4.3 is required.
+
+0.5 → 0.6 changes: `use_theme()` and `use_strings()` return a `Signal` (read
+with `theme.read().field`, change with `theme.write().field = ..`);
+`ReorderList`'s `onreorder: (from, to)` is `on_reorder: ReorderEvent`;
+`heading_level` takes a `HeadingLevel` (`HeadingLevel::H3`, not `3`); and
+`Grid`'s `wide_columns` / `wide_gap` are `medium_columns` / `medium_gap`.
+A `Strings` built as a full struct literal needs the new date and rating
+fields, so prefer `..Strings::default()`.
