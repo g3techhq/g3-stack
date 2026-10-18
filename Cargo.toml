@@ -38,7 +38,7 @@ g3-native-plugins = { version = "0.4.4", features = [
 ] }
 # Sessions, the signed-in user, and a guard that denies by default; see
 # src/auth/session.rs. The `server` feature below turns its server side on.
-g3-auth = "0.1.3"
+g3-auth = "0.2.0"
 # The screen cache on the device, server caches, and CDN headers for shared
 # reads. Enable its platform feature in each app feature below.
 g3-cache = "0.2.1"
