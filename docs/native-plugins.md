@@ -8,10 +8,10 @@ with Apple, system Back. One call site serves web, Android, and iOS.
 
 ## Enabling a plugin
 
-Each plugin is a Cargo feature. The template enables three:
+Each plugin is a Cargo feature. The template enables four:
 
 ```toml
-g3-native-plugins = { version = "0.4.2", features = ["back-button", "clipboard", "external-url"] }
+g3-native-plugins = { version = "0.4.4", features = ["back-button", "clipboard", "external-url", "safe-area"] }
 ```
 
 | Feature | Android | iOS | Web | What it does |
@@ -19,6 +19,7 @@ g3-native-plugins = { version = "0.4.2", features = ["back-button", "clipboard",
 | `back-button` | yes | yes | — | System Back and the iOS edge swipe. Wired to navigation already; see [navigation.md](navigation.md) |
 | `clipboard` | yes | yes | yes | Copy, and the native share sheet (Web Share in a browser) |
 | `external-url` | yes | yes | yes | Open a URL in the system browser |
+| `safe-area` | yes | — | — | Keeps the header and tab bar clear of Android's status and gesture bars, which older WebViews leave at 0 for `env(safe-area-inset-*)`. Started by the provider; also hides the bars (`set_bars_hidden`). iOS and browsers report `env()` correctly |
 | `storage` | yes | yes | yes\* | Key-value storage in the Keystore / Keychain. \*`localStorage` on web, **unencrypted** |
 | `auth` | yes | yes | — | Google Sign-In (Android), Sign in with Apple (iOS) |
 | `deep-links` | yes | yes | — | Receive the URL a universal link or App Link opened the app with |

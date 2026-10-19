@@ -35,6 +35,7 @@ g3-native-plugins = { version = "0.4.4", features = [
     "back-button",
     "clipboard",
     "external-url",
+    "safe-area",
 ] }
 # Sessions, the signed-in user, and a guard that denies by default; see
 # src/auth/session.rs. The `server` feature below turns its server side on.
