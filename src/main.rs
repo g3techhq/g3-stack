@@ -59,7 +59,9 @@ fn main() {
         let session_config = SessionConfig::default()
             .with_cookie_path("/")
             .with_secure(!cfg!(debug_assertions));
-        let auth_config = AuthConfig::<String>::default();
+        // Reload accounts so deletion or an AuthUser::FILTER change revokes
+        // already-active devices instead of trusting the sliding user cache.
+        let auth_config = AuthConfig::<String>::default().set_cache(false);
         let session_store = SessionStore::new(
             Some(SurrealSessionPool::new(Arc::clone(&db))),
             session_config,

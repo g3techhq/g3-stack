@@ -29,6 +29,12 @@ request
 `src/auth/session.rs` names these for the app: `AppUser` describes the
 account table, and `StateExtractor` is `g3_auth::SessionContext` for it.
 
+The auth configuration uses `set_cache(false)`: the account is reloaded for every
+authenticated request, so deletion or an `AuthUser::FILTER` change revokes other
+devices on their next request. The upstream sliding account cache otherwise keeps
+old identities live after the row is gone. Removing stored session payloads and
+replaying erasure after restore are separate privacy operations.
+
 ### Guarded by default
 
 The guard (`g3_auth::require_session`, installed in `main.rs` with
