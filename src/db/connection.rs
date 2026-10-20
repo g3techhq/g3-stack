@@ -45,11 +45,7 @@ pub async fn init_db_connection() -> Result<Surreal<Client>> {
     let host = surrealdb_host();
 
     db.connect::<Ws>(ws_connector_host(&host)).await?;
-    db.signin(Root {
-        username: env("SURREALDB_USER"),
-        password: env("SURREALDB_PASSWORD"),
-    })
-    .await?;
+    authenticate(&db).await?;
     db.use_ns(env("SURREALDB_NAMESPACE"))
         .use_db(env("SURREALDB_NAME"))
         .await?;
@@ -67,16 +63,40 @@ pub async fn init_db_connection() -> Result<Surreal<Client>> {
 #[cfg(debug_assertions)]
 pub async fn sync_dev_schema() -> anyhow::Result<()> {
     let db = connect(any_connector_endpoint(&surrealdb_host())).await?;
-    db.signin(Root {
-        username: env("SURREALDB_USER"),
-        password: env("SURREALDB_PASSWORD"),
-    })
-    .await?;
+    authenticate(&db).await?;
     db.use_ns(env("SURREALDB_NAMESPACE"))
         .use_db(env("SURREALDB_NAME"))
         .await?;
 
     embedded_schema::sync(&db).await
+}
+
+// A shared server must not give app containers a root identity. Root remains
+// available for existing local environments; production opts into database auth.
+#[cfg(feature = "server")]
+async fn authenticate<C: surrealdb::Connection>(db: &Surreal<C>) -> anyhow::Result<()> {
+    let read = |key: &str| std::env::var(key);
+    let username = read("SURREALDB_USER")?;
+    let password = read("SURREALDB_PASSWORD")?;
+    match read("SURREALDB_AUTH_LEVEL")
+        .unwrap_or_else(|_| "root".into())
+        .as_str()
+    {
+        "database" => {
+            db.signin(surrealdb::opt::auth::Database {
+                namespace: read("SURREALDB_NAMESPACE")?,
+                database: read("SURREALDB_NAME")?,
+                username,
+                password,
+            })
+            .await?;
+        }
+        "root" => {
+            db.signin(Root { username, password }).await?;
+        }
+        _ => anyhow::bail!("SURREALDB_AUTH_LEVEL must be root or database"),
+    }
+    Ok(())
 }
 
 #[cfg(test)]

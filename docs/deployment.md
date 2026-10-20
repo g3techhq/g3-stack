@@ -16,7 +16,8 @@ read only the real environment, so a container needs them supplied.
 | Variable | Notes |
 | --- | --- |
 | `SURREALDB_HOST` | `ws://` or `wss://`. Use `wss://` for anything crossing a network you do not own. |
-| `SURREALDB_USER` / `SURREALDB_PASSWORD` | Root credentials. |
+| `SURREALDB_USER` / `SURREALDB_PASSWORD` | Runtime credentials. Use a dedicated database user on a shared server. |
+| `SURREALDB_AUTH_LEVEL` | `database` for a database-scoped runtime identity; `root` (the compatibility default) for existing local setups. Invalid values fail rather than silently broadening access. |
 | `SURREALDB_NAMESPACE` / `SURREALDB_NAME` | Separate databases per environment — never point staging at production. |
 | `PORT` / `IP` | What the server listens on. The image sets `8080` and `0.0.0.0`. |
 
