@@ -1,4 +1,4 @@
-// `user_error_logged` is for refusals whose cause belongs in the log.
+// `user_error_logged` records refusals without formatting private parser causes.
 #[cfg_attr(feature = "server", allow(dead_code))]
 mod api_errors;
 mod app;
