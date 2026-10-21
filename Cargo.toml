@@ -63,6 +63,8 @@ url = "2.5"
 surrealdb = { version = "=3.2.4", optional = true }
 surrealkit = { version = "0.6.3", default-features = false, optional = true }
 tokio = { version = "1.42", features = ["full"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "std", "json", "env-filter"], optional = true }
 axum = { version = "0.8.9", optional = true }
 axum-macros = { version = "0.5.0", optional = true }
 axum_session = { version = "0.20.1", optional = true }
@@ -92,6 +94,8 @@ mobile = [
 ]
 
 server = [
+    "dep:tracing",
+    "dep:tracing-subscriber",
     "dioxus/server",
     "g3-auth/server",
     "g3-cache/server",

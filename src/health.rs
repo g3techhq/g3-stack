@@ -27,8 +27,8 @@ async fn ready(State(db): State<Arc<Surreal<Client>>>) -> impl IntoResponse {
             StatusCode::OK,
             Json(json!({ "status": "ok", "database": "ok" })),
         ),
-        Err(error) => {
-            eprintln!("Readiness check failed to reach SurrealDB: {error}");
+        Err(_) => {
+            eprintln!("event=database_readiness_failed");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({ "status": "degraded", "database": "unreachable" })),
@@ -43,6 +43,9 @@ pub fn health_router(db: Arc<Surreal<Client>>) -> Router {
     Router::new()
         .route(HEALTH_PATH, get(live))
         .route(READY_PATH, get(ready))
+        .layer(axum::middleware::from_fn(
+            crate::telemetry::request_complete,
+        ))
         .with_state(db)
 }
 

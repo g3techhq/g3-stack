@@ -10,6 +10,8 @@ mod db;
 mod health;
 mod server_url;
 mod state;
+#[cfg(feature = "server")]
+mod telemetry;
 
 use app::App;
 
@@ -38,11 +40,13 @@ fn main() {
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 
+    crate::telemetry::init();
+
     dioxus::serve(|| async move {
         let db = Arc::new(
             init_db_connection()
                 .await
-                .expect("Failed to connect to SurrealDB. Is it running (`just db-up`), and is .env filled in?"),
+                .unwrap_or_else(|_| panic!("Failed to connect to SurrealDB. Is it running (`just db-up`), and is .env filled in?")),
         );
 
         // Debug builds keep the running database in step with
@@ -67,7 +71,7 @@ fn main() {
             session_config,
         )
         .await
-        .expect("Failed to create the session store.");
+        .unwrap_or_else(|_| panic!("Failed to create the session store."));
 
         // Signed-out page loads go to the splash; `#[public]` on `Route` and on
         // server functions marks what they may reach. Panics here, at startup,
@@ -91,6 +95,7 @@ fn main() {
             // A server fault is logged here and the client gets only its code;
             // a refusal written for the user (`api_errors::user_error`) keeps its words.
             .layer(from_fn(api_errors::suppress_server_errors))
+            .layer(from_fn(crate::telemetry::request_complete))
             // Merged, not layered, and merged last: `Router::layer` only wraps
             // routes registered before it, so probes reaching the app this way
             // skip the session and auth layers entirely. A health check should

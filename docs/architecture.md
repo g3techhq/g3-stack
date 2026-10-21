@@ -280,3 +280,23 @@ Every table is `PERMISSIONS NONE`. Nothing connects to SurrealDB but the server,
 which authenticates as root; authorization is the `owner = $user` clause in
 each query. Row-level database permissions would be a second source of truth
 about the same question.
+
+## Routine request telemetry
+
+The server installs `src/telemetry.rs` before starting Dioxus. Its fixed filter
+accepts only the shared telemetry target; `RUST_LOG` cannot enable dependency
+payloads or surrounding span fields. Each completed request emits a JSON
+`request_complete` event with the source-defined route pattern, status code and
+duration. Parameter values, queries, headers, cookies and bodies are excluded.
+The event matches g3-platform's approved forwarding pipeline.
+
+The request layer precedes the final health-router merge. Probes have their own
+telemetry layer and still bypass sessions, authentication and rate limits. A DB
+readiness failure prints a fixed operation label rather than the raw cause.
+Startup connection/session failures also avoid formatting private diagnostics.
+
+This limits the new request events; it does not prove existing direct stdout,
+stderr, panics, provider SDKs, host/proxy logs or remote retention are safe. Audit
+those paths and verify the actual collector/destination before rollout. No trace
+exporter or new remote destination is enabled by this module. Keep this file in
+step with the consuming apps when changing the shared telemetry contract.

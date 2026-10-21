@@ -44,7 +44,7 @@ tests/ui/               Playwright smoke tests
 ```
 
 **These files are the stack's shared code.** `build.rs`, `src/health.rs`,
-`src/server_url.rs`, `src/api_errors.rs` and `src/components/shared/error_message.rs`
+`src/server_url.rs`, `src/api_errors.rs`, `src/telemetry.rs` and `src/components/shared/error_message.rs`
 are the same in every app built on it (media-mancer, greenside-partee,
 swift-circuits), without being a crate. A change to one goes here first, then is
 copied to the apps, so a new project and an old one never differ by accident.

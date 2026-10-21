@@ -46,7 +46,7 @@ g3-cache = "0.2.1"
 # --- Shared (client + server) --------------------------------------------
 # `surrealdb-types` carries the `SurrealValue` derive and the `RecordId` /
 # `Datetime` types used in structs that cross the wire, so it is NOT
-# server-only â€” the full `surrealdb` client below is.
+# server-only — the full `surrealdb` client below is.
 surrealdb-types = "=3.2.4"
 cfg-if = "1.0.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -62,6 +62,8 @@ url = "2.5"
 surrealdb = { version = "=3.2.4", optional = true }
 surrealkit = { version = "0.6.3", default-features = false, optional = true }
 tokio = { version = "1.42", features = ["full"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "std", "json", "env-filter"], optional = true }
 axum = { version = "0.8.9", optional = true }
 axum-macros = { version = "0.5.0", optional = true }
 axum_session = { version = "0.20.1", optional = true }
@@ -91,6 +93,8 @@ mobile = [
 ]
 
 server = [
+    "dep:tracing",
+    "dep:tracing-subscriber",
     "dioxus/server",
     "g3-auth/server",
     "g3-cache/server",
@@ -136,7 +140,7 @@ debug = 0
 strip = "debuginfo"
 
 # `getrandom` needs an explicit browser backend on wasm, and the dependency
-# tree pulls in both major versions â€” each needs its own opt-in.
+# tree pulls in both major versions — each needs its own opt-in.
 [target.wasm32-unknown-unknown.dependencies.getrandom_v03]
 package = "getrandom"
 version = "0.3.3"
