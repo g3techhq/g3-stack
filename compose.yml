@@ -17,7 +17,7 @@ services:
       # so a plain "8000:8000" would put a root-credentialed database on
       # every interface of the machine.
       - "127.0.0.1:${SURREALDB_PORT:-8000}:8000"
-    restart: unless-stopped
+    restart: "no"
     command:
       - start
       - "--user=${SURREALDB_USER:-root}"
