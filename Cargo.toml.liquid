@@ -145,6 +145,41 @@ inherits = "dev"
 debug = 0
 strip = "debuginfo"
 
+# dx builds each platform's release with its own profile (`wasm-release`,
+# `server-release`, `android-release`, `ios-release`) and makes one up from
+# `release` only when it is not defined here.
+
+# The browser downloads and compiles the whole wasm before the first screen,
+# so the web client is built for size. In media-mancer this cut the brotli
+# download by a quarter and the wasm to compile by a third; "s" is worth
+# measuring against "z".
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+# Client only: the server must keep unwinding, so one failed request does not
+# take the process down.
+panic = "abort"
+debug = false
+# dx passes `strip=false` on every build. Saying it here too gives the
+# Dockerfile's `cargo chef cook` the same profile, so dx reuses its cache.
+strip = false
+
+[profile.server-release]
+inherits = "release"
+strip = false
+
+# Phones run the UI natively here, so CPU matters more than size.
+[profile.android-release]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[profile.ios-release]
+inherits = "android-release"
+
 # `getrandom` needs an explicit browser backend on wasm, and the dependency
 # tree pulls in both major versions — each needs its own opt-in.
 [target.wasm32-unknown-unknown.dependencies.getrandom_v03]

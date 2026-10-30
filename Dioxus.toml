@@ -7,6 +7,12 @@ out_dir = "dist"
 tailwind_input = "tailwind.css"
 tailwind_output = "assets/tailwind.css"
 
+[web]
+# Release builds write a brotli copy of every asset and the wasm next to it,
+# which the server sends to browsers that accept it. Quality 11 at build time
+# is smaller than a proxy compressing on the fly, and needs no proxy at all.
+pre_compress = true
+
 [web.app]
 title = "G3 App"
 
