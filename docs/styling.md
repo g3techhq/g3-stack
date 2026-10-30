@@ -56,12 +56,18 @@ the rail width. Check g3-ui's stylesheet for the names. Setting those is fine.
 
 ## Theming
 
-Everything about color is `app_theme` in `src/app.rs`:
+Colors live in `app_theme` in `src/app.rs`. The template starts with a quiet
+blue/slate palette: pale blue ground and near-white cards in light mode,
+deep navy ground and progressively lighter surfaces in dark mode. Both
+palettes include an `app_look()` for the shared surface treatment.
+
+The scheme selection uses those two palettes:
 
 ```rust
 pub fn app_theme(scheme: ColorScheme) -> Theme {
-    let light = || Theme::default_light().with_accent("#2563eb");
-    let dark = || Theme::default_dark().with_accent("#3b82f6");
+    // Define your light and dark palettes here, each with look: app_look().
+    let light = || Theme { look: app_look(), ..Theme::default_light() };
+    let dark = || Theme { look: app_look(), ..Theme::default_dark() };
     match scheme {
         ColorScheme::Auto => Theme::adaptive(light(), dark()),
         ColorScheme::Light => light(),
@@ -108,6 +114,18 @@ Two things make a palette hold up:
 The theme is applied as custom properties on the shell element, so changing it
 re-themes the running app in place — navigation and half-typed forms survive a
 light/dark switch.
+
+### Surface treatment with `Look`
+
+`app_look()` supplies soft page gradients, rounded cards with a fine border,
+a restrained shadow and sheen, and a gradient for primary actions. The
+gradients reference theme tokens, so changing the two palettes also changes
+the surface treatment. Cards stay opaque; no backdrop blur is needed.
+
+Edit the `Look` fields to give your app a different character. Leave a field
+as `None` to use g3-ui's platform default. If light and dark need different
+gradient layers, give each palette its own `Look`; `Theme::adaptive` carries
+both and switches them with the system setting.
 
 ### Light, dark, iOS, Material
 

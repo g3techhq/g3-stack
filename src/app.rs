@@ -18,7 +18,7 @@ use g3_native_plugins::NativePluginsProvider;
 use g3_route_transitions::{
     RouteTransitions, use_browser_history_transitions, use_native_back_navigation,
 };
-use g3_ui::{AppWrapper, Theme};
+use g3_ui::{AppWrapper, Look, Theme};
 use strum_macros::{Display, EnumString};
 
 /// Blocks first paint on the stylesheet for web builds. The runtime
@@ -148,14 +148,42 @@ fn RootLayout() -> Element {
 
 /// Your brand, in one function.
 ///
-/// `Theme`'s fields are all public, so a whole custom palette is struct-update
-/// syntax over a preset. `with_accent` alone changes the color that tints
-/// focus rings, selected segments, active toggles, and links — which is most
-/// of what makes an app look like itself. docs/styling.md walks through a full
-/// palette.
+/// A quiet blue/slate palette with rounded, edged surfaces. Change the colors
+/// here and the token-based `app_look` follows; docs/styling.md covers both.
 pub fn app_theme(scheme: ColorScheme) -> Theme {
-    let light = || Theme::default_light().with_accent("#2563eb");
-    let dark = || Theme::default_dark().with_accent("#3b82f6");
+    let light = || Theme {
+        accent: "#2359c4".into(),
+        accent_secondary: "#315faf".into(),
+        text: "#1c2c45".into(),
+        text_secondary: "#4e607a".into(),
+        text_tertiary: "#5c6d85".into(),
+        bg: "#eaf0f8".into(),
+        bg_secondary: "#dfe7f2".into(),
+        card: "#f9fbff".into(),
+        surface: "#f2f6fd".into(),
+        control: "#e0e8f4".into(),
+        border: "#c5d1e2".into(),
+        shadow: "rgba(28, 50, 87, 0.12)".into(),
+        look: app_look(),
+        ..Theme::default_light()
+    };
+    let dark = || Theme {
+        accent: "#8bb9ff".into(),
+        accent_secondary: "#9ad8e5".into(),
+        on_accent: "#0c2344".into(),
+        text: "#eef4ff".into(),
+        text_secondary: "#c1cee2".into(),
+        text_tertiary: "#a2b4ce".into(),
+        bg: "#0d1728".into(),
+        bg_secondary: "#121e31".into(),
+        card: "#18263b".into(),
+        surface: "#21324a".into(),
+        control: "#2a3c56".into(),
+        border: "#3d526e".into(),
+        shadow: "rgba(0, 0, 0, 0.28)".into(),
+        look: app_look(),
+        ..Theme::default_dark()
+    };
     match scheme {
         // Every token becomes a CSS `light-dark()` pair, so the browser follows
         // the system setting by itself: no script, and the server's HTML is
@@ -163,6 +191,19 @@ pub fn app_theme(scheme: ColorScheme) -> Theme {
         ColorScheme::Auto => Theme::adaptive(light(), dark()),
         ColorScheme::Light => light(),
         ColorScheme::Dark => dark(),
+    }
+}
+
+fn app_look() -> Look {
+    // Token-based layers make this a starting point for another brand, too.
+    Look {
+        background: Some("radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--g3-color-accent) 10%, transparent), transparent 60%), radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--g3-color-accent-secondary) 7%, transparent), transparent 60%)".into()),
+        card_radius: Some("1.125rem".into()),
+        card_border: Some("1px solid var(--g3-color-border)".into()),
+        card_shadow: Some("0 0.5rem 1.5rem -0.625rem var(--g3-color-shadow)".into()),
+        card_sheen: Some("linear-gradient(145deg, color-mix(in srgb, var(--g3-color-accent) 3%, transparent), transparent 60%)".into()),
+        accent_fill: Some("linear-gradient(120deg, var(--g3-color-accent), var(--g3-color-accent-secondary))".into()),
+        ..Look::default()
     }
 }
 
