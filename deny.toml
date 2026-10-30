@@ -46,3 +46,8 @@ external-default-features = "allow"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+# The Dioxus fork and its ecosystem forks, and the g3 crates, come from git
+# under `[patch.crates-io]` until Dioxus 0.8.0 is published.
+[sources.allow-org]
+github = ["Gateway3B", "g3techhq"]

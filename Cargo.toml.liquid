@@ -10,14 +10,16 @@ description = "A cross-platform app on the g3 stack: Dioxus, SurrealDB, g3-ui, g
 # --- Core framework -------------------------------------------------------
 # Pinned exactly, because the `dx` CLI refuses a build whose `dioxus` version
 # does not match its own ("dx and dioxus versions are incompatible"). A caret
-# requirement quietly floats to the next patch and starts warning on a clean
-# clone. Bump these and the CLI together:
+# requirement quietly floats to the next alpha and starts warning on a clean
+# clone. Until Dioxus 0.8.0 is published these come from the g3 fork (see
+# `[patch.crates-io]` at the end), and `dx` must be built from the same fork:
 #
-#     cargo binstall dioxus-cli@<new version> --force
-dioxus = { version = "=0.7.9", features = ["router", "fullstack"] }
-dioxus-fullstack = "=0.7.9"
-dioxus-icons = "0.1.0"
-manganis = "=0.7.9"
+#     cargo install --git https://github.com/Gateway3B/dioxus --branch main dioxus-cli --locked
+dioxus = { version = "=0.8.0-alpha.3", features = ["router", "fullstack"] }
+dioxus-fullstack = "=0.8.0-alpha.3"
+# Exact too: each icons alpha is built against one Dioxus alpha.
+dioxus-icons = "=0.2.0-alpha.3"
+manganis = "=0.8.0-alpha.3"
 
 # --- The g3 libraries -----------------------------------------------------
 # The three move together: g3-ui's `transitions` feature and
@@ -151,3 +153,39 @@ features = ["wasm_js"]
 package = "getrandom"
 version = "0.2"
 features = ["js"]
+
+# Dioxus 0.8 is not on crates.io yet. Until it is, the app builds against the
+# g3 fork of Dioxus `main` (upstream main plus the commits listed in the
+# fork's G3-PATCHES.md), two ecosystem crates forked to match it, and the g3
+# libraries' `main` branches, which have moved to the fork. The requirements
+# above stay crates.io versions; these lines only say where those versions
+# live until they are published. Delete the block once Dioxus 0.8.0 and the
+# matching g3 releases are on crates.io.
+#
+# Working on a g3 library or the fork itself? Leave these lines alone and put
+# a `[patch.crates-io]` table of `path = ".."` entries in a
+# `.cargo/config.toml` above your checkouts (see README.md). A config patch
+# overrides a manifest patch for the same crate, and Cargo then never fetches
+# the git source named here. Keep `Cargo.lock` out of commits while it does:
+# it points at your local paths.
+[patch.crates-io]
+# One line per crate of the Dioxus repository that something in this graph
+# asks crates.io for; the rest come from the fork's own workspace.
+dioxus = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+dioxus-fullstack = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+dioxus-signals = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+# These two through dioxus-icons, which builds its SVG templates by hand.
+dioxus-vdom-template = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+lazy-js-bundle = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+manganis = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
+# The published 0.2.0-alpha.3 depends on `dioxus-core-template`, which
+# upstream renamed to `dioxus-vdom-template`.
+dioxus-icons = { git = "https://github.com/Gateway3B/dioxus-icons", branch = "main" }
+# g3-auth's mobile cookie jar; the published 0.2 requires Dioxus 0.7.
+dioxus-cookie = { git = "https://github.com/Gateway3B/dioxus-cookie", branch = "main" }
+# The g3 crates are not published until Dioxus 0.8.0 is.
+g3-auth = { git = "https://github.com/g3techhq/g3-auth", branch = "main" }
+g3-cache = { git = "https://github.com/g3techhq/g3-cache", branch = "main" }
+g3-native-plugins = { git = "https://github.com/g3techhq/g3-native-plugins", branch = "main" }
+g3-route-transitions = { git = "https://github.com/g3techhq/g3-route-transitions", branch = "main" }
+g3-ui = { git = "https://github.com/g3techhq/g3-ui", branch = "main" }
