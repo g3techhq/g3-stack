@@ -133,9 +133,37 @@ SERVER_URL=https://app.example.com dx bundle --platform android --release
 SERVER_URL=https://app.example.com dx bundle --platform ios --release
 ```
 
+The **Build Mobile Artifacts** workflow (`.github/workflows/build-mobile.yml`)
+does the same on CI, with what a store upload needs on top. The store-release
+fixes it relies on (`versionCode`, `--appstore`, icons, signed Swift
+frameworks) are in the g3 fork's `dx`, not in 0.7.9.
+
+- **Build numbers.** Every upload needs a higher one than the last. The
+  workflow passes its run number as `DX_ANDROID_VERSION_CODE` (Android's
+  `versionCode`) and `DX_BUNDLE_VERSION` (iOS's `CFBundleVersion`); locally,
+  set them yourself or use `--version-code` / `--bundle-version`.
+- **Android signing.** `dx` signs with a keystore named under
+  `[android.signing]` in `Dioxus.toml` (`jks_file`, `jks_password`,
+  `key_alias`, `key_password`), as plain values, so never commit that table.
+  The workflow adds it on the runner when the `ANDROID_UPLOAD_KEYSTORE_BASE64`,
+  `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS` and
+  `ANDROID_UPLOAD_KEY_PASSWORD` secrets exist. Use Play App Signing with an
+  upload key. The Gradle project `dx` generates holds the passwords too, so
+  never upload or commit `target/`.
+- **iOS signing.** With the `IOS_DISTRIBUTION_CERTIFICATE_BASE64` (a `.p12`),
+  `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` and `IOS_APPSTORE_PROFILE_BASE64`
+  secrets, the workflow installs an Apple Distribution certificate and an App
+  Store provisioning profile on the runner and bundles with `--appstore`.
+  Without them both platforms build unsigned, as before.
+
 Before the first store submission:
 
-- Set `[bundle] identifier`, `publisher`, and the icon in `Dioxus.toml`.
+- Set `[bundle] identifier`, `publisher`, and the icon in `Dioxus.toml`. The
+  template's icon is an SVG, which Android's launcher icons are generated
+  from, but iOS needs an opaque 1024×1024 PNG (the largest raster under
+  `[ios] icon` or `[bundle] icon`).
+- Check `[android] target_sdk` against Google Play's current target API rule,
+  and that the iOS runner's Xcode is the one App Store Connect requires.
 - Both stores require **in-app account deletion** for any app with accounts.
   The template ships it: Settings → Delete account, backed by `delete_account`
   in `src/auth/account.rs`.

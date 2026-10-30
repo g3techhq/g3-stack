@@ -12,17 +12,20 @@ your own domain.
 
 | Piece | Version | Reference |
 | --- | --- | --- |
-| Dioxus (fullstack, router) | 0.7.9, pinned `=` | [docs/dioxus/](docs/dioxus/README.md), [dioxuslabs.com/learn/0.7](https://dioxuslabs.com/learn/0.7/) |
-| g3-ui (components, theme) | 0.5 | [docs/g3-ui.md](docs/g3-ui.md) |
+| Dioxus (fullstack, router) | 0.8.0-alpha.3, pinned `=`, from the [g3 fork](https://github.com/Gateway3B/dioxus) of `main` | [docs/dioxus/](docs/dioxus/README.md), [dioxuslabs.com/learn/0.7](https://dioxuslabs.com/learn/0.7/) |
+| g3-ui (components, theme) | 0.6 | [docs/g3-ui.md](docs/g3-ui.md) |
 | g3-route-transitions (navigation) | 0.5 | [docs/navigation.md](docs/navigation.md) |
 | g3-native-plugins (device APIs) | 0.4 | [docs/native-plugins.md](docs/native-plugins.md) |
-| g3-auth (session guard, `#[public]`) | 0.1 | [docs/authentication.md](docs/authentication.md) |
+| g3-auth (session guard, `#[public]`, `RecordId`) | 0.2 | [docs/authentication.md](docs/authentication.md) |
 | g3-cache (client, server and CDN caches) | 0.2 | [docs/architecture.md](docs/architecture.md#data-and-the-caches) |
 | SurrealDB + SurrealKit | 3.2.4 / 0.6.3 | [database/README.md](database/README.md) |
 | Tailwind (layout utilities only) | v4, run by `dx` | [docs/styling.md](docs/styling.md) |
 
 **Your training data is probably wrong about these.** Dioxus 0.7 changed server
-functions, assets and signals from earlier versions, and the g3 crates are new.
+functions, assets and signals from earlier versions, `main` has moved on again
+(`dioxus-core` is now `dioxus-vdom`; reach it as `dioxus::core`), and the g3
+crates are new. Until Dioxus 0.8.0 is published, read the framework's source
+in the fork rather than docs.rs.
 Read the linked doc before writing code against a library, not after it fails
 to compile. Prefer the patterns already in `src/` over what you remember.
 
@@ -144,8 +147,8 @@ The full guide, with examples, is [docs/dioxus/patterns.md](docs/dioxus/patterns
   [docs/troubleshooting.md](docs/troubleshooting.md)).
 - `AppState` is `Copy`; capture it into closures directly. A closure that
   captures only `Copy` handles is itself `Copy`.
-- Format with `cargo fmt`. Do not run `dx fmt` 0.7.9: it corrupts closures
-  inside `rsx!` (see [docs/dioxus/patterns.md](docs/dioxus/patterns.md#tooling)).
+- Format with `cargo fmt`. Do not run `dx fmt`: 0.7.9's corrupts closures
+  inside `rsx!`, and the fork's is unchecked (see [docs/dioxus/patterns.md](docs/dioxus/patterns.md#tooling)).
 
 ### Reading and changing data
 
@@ -259,7 +262,12 @@ pub async fn create_note(title: String, body: String) -> Result<Note> { .. }
   transitions, gestures, the responsive layout and hydration.
 - In Playwright, query by role and accessible name, never by CSS class.
 - Do not add dependencies without a reason tied to the task. Pin `dioxus*` and
-  `manganis` exactly (`=0.7.9`); they must match the `dx` CLI.
+  `manganis` exactly (`=0.8.0-alpha.3`), from the fork via `[patch.crates-io]`;
+  they must match the `dx` CLI, built from the same fork. A Dioxus crate the
+  graph newly asks crates.io for gets a line in that block too.
+- Never point a `[patch.crates-io]` line at a local path. Local checkouts go in
+  a `.cargo/config.toml` outside the repository (see README.md), and
+  `Cargo.lock` stays out of commits while one is active.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `chore:`).
 
 ---
@@ -279,8 +287,9 @@ just dev                  # or reuse a server already on :8080
 - Sign in with **Continue as guest**. It creates a fresh account each time.
 - A sheet or push transition takes ~400ms. Wait before screenshotting, or you
   capture the page mid-animation.
-- Stop `dx serve` before editing Rust: a failed hot-patch can leave a build
-  that never loads (see [docs/troubleshooting.md](docs/troubleshooting.md)).
+- Stop `dx serve` before editing Rust: the fork's `dx` hot-patches by default,
+  and a failed hot-patch can leave a build that never loads (see
+  [docs/troubleshooting.md](docs/troubleshooting.md)).
 - Read the `dx serve` output for `[500]`s and panics, and the browser console
   for `Error deserializing data` (a hydration mismatch).
 

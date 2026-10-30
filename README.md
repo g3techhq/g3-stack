@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://dioxuslabs.com"><img alt="Dioxus 0.7" src="https://img.shields.io/badge/Dioxus-0.7.9-e96020"></a>
+  <a href="https://github.com/Gateway3B/dioxus"><img alt="Dioxus 0.8 alpha" src="https://img.shields.io/badge/Dioxus-0.8.0--alpha.3-e96020"></a>
   <a href="https://crates.io/crates/g3-ui"><img alt="g3-ui" src="https://img.shields.io/crates/v/g3-ui?label=g3-ui"></a>
   <a href="https://surrealdb.com"><img alt="SurrealDB 3" src="https://img.shields.io/badge/SurrealDB-3.2-ff00a0"></a>
   <a href="#license"><img alt="License: MIT or Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue"></a>
@@ -37,11 +37,14 @@ agent can follow. The part you write is your app.
 ## Quick start
 
 You need [Rust](https://rustup.rs), [Docker](https://docker.com),
-[Node 20+](https://nodejs.org), and two cargo tools:
+[Node 20+](https://nodejs.org), and two cargo tools. `dx` is built from the g3
+fork of Dioxus (see [below](#dioxus-08-and-the-g3-fork)), which takes a few
+minutes:
 
 ```bash
+cargo install --git https://github.com/Gateway3B/dioxus --branch main dioxus-cli --locked
 cargo install cargo-binstall
-cargo binstall dioxus-cli@0.7.9 just
+cargo binstall just
 ```
 
 Then:
@@ -79,7 +82,7 @@ date, and generates a project from the template and checks it.
 
 | Layer | Library | In this template |
 | --- | --- | --- |
-| App framework | [Dioxus 0.7](https://dioxuslabs.com/learn/0.7/) | One `src/` for web (WASM), Android, and iOS. Components, signals, router, and server functions |
+| App framework | [Dioxus](https://dioxuslabs.com/learn/0.7/) 0.8 alpha ([g3 fork](#dioxus-08-and-the-g3-fork)) | One `src/` for web (WASM), Android, and iOS. Components, signals, router, and server functions |
 | Components | [g3-ui](https://github.com/g3techhq/g3-ui) | 30+ Ionic-style components with iOS and Material modes, dark mode, a desktop rail layout, and ARIA. Every screen is built from them |
 | Navigation | [g3-route-transitions](https://github.com/g3techhq/g3-route-transitions) | Push, sheet, and fade transitions declared on the route enum, with Android Back and the iOS edge swipe wired to the same animation |
 | Device APIs | [g3-native-plugins](https://github.com/g3techhq/g3-native-plugins) | Share sheet, clipboard, system browser, and system Back today; storage, auth, deep links, location, purchases, and media one feature flag away |
@@ -250,17 +253,40 @@ The template is written to be worked on by coding agents as well as people.
 A good first prompt: *"Read AGENTS.md, then add tags to notes using the
 add-feature skill."*
 
+## Dioxus 0.8 and the g3 fork
+
+Until Dioxus 0.8.0 is published, the stack runs on
+[a fork of Dioxus `main`](https://github.com/Gateway3B/dioxus): upstream `main`
+plus the mobile-release and robustness fixes listed in its `G3-PATCHES.md`.
+`Cargo.toml` still asks for crates.io versions (`dioxus = "=0.8.0-alpha.3"`,
+`g3-ui = "0.6"`); its `[patch.crates-io]` block says where those live until
+they are published: the fork, two ecosystem crates forked to match it, and
+the g3 libraries' `main` branches. `dx` has to come from the same fork, which
+is why the quick start builds it from git. Once 0.8.0 is out, the block goes
+and everything comes from crates.io again.
+
 ## Developing against local g3 libraries
 
-The template uses the published crates. To build against local checkouts,
-create `.cargo/config.toml` (gitignored):
+Leave `Cargo.toml` as it is and point Cargo at your checkouts from a
+`.cargo/config.toml` above them, for example in the folder that holds this
+project and the libraries side by side. Cargo reads every `.cargo/config.toml`
+from the current directory up, and a `[patch.crates-io]` there overrides the
+manifest's for the same crate without ever fetching the git source:
 
 ```toml
 [patch.crates-io]
-g3-ui = { path = "../g3-ui" }
-g3-route-transitions = { path = "../g3-route-transitions" }
-g3-native-plugins = { path = "../g3-native-plugins" }
+g3-ui = { path = "/path/to/g3-ui" }
+g3-route-transitions = { path = "/path/to/g3-route-transitions" }
+g3-route-transitions-macros = { path = "/path/to/g3-route-transitions/macros" }
+g3-native-plugins = { path = "/path/to/g3-native-plugins" }
+# The same for g3-auth, g3-cache and their -macros crates, and for the Dioxus
+# fork's crates (dioxus, dioxus-fullstack, manganis, ...) when working on it.
 ```
+
+Outside the repository, it cannot be committed by accident; the pre-commit
+hook rejects a `Cargo.lock` that resolves a g3 library to a local path, so
+leave the lockfile out of commits while the overrides are active. To build
+exactly what a fresh clone or CI builds, move the file aside.
 
 ## Community
 

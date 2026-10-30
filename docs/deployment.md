@@ -41,7 +41,16 @@ docker build -t my-app:latest .
 
 The Dockerfile uses `cargo-chef`, so a dependency layer is cached and an
 app-code change rebuilds only the app. The first build is slow — it compiles the
-whole tree twice, once for the host server and once for WASM.
+whole tree twice, once for the host server and once for WASM. The cook steps
+build exactly what `dx bundle` then builds (the `wasm-release` and
+`server-release` profiles, each target, each feature set); change one and the
+other must follow, or every image recompiles everything.
+
+The image builds `dx` from the g3 fork of Dioxus, the commit the libraries
+come from. Docker caches that layer by its text, so after the fork moves,
+rebuild without the cache (`--no-cache`) or `dx` and the libraries drift
+apart. Release builds pre-compress the web assets with brotli (`[web]
+pre_compress` in `Dioxus.toml`), and the server sends those copies itself.
 
 The image exposes 8080 and reads `PORT` and `IP`.
 
@@ -181,7 +190,8 @@ A release mobile build refuses to start without an HTTPS `SERVER_URL`. Signing,
 deep links, and store requirements are in [mobile.md](mobile.md).
 
 The manual **Build Mobile Artifacts** workflow keeps these expensive native
-builds out of pull requests and normal `main` pushes. It uploads Android APK/AAB
-and unsigned iOS IPA artifacts for 14 days. Treat those as compile outputs;
-store distribution still requires an Android upload keystore or Apple
-distribution certificate and provisioning profile.
+builds out of pull requests and normal `main` pushes. It uploads the Android
+APK/AAB and the iOS IPA for 14 days, numbered with the run number so each
+upload outnumbers the last. They are signed for the stores only when the
+signing secrets in [mobile.md](mobile.md#releasing) are set; otherwise treat
+them as compile outputs.

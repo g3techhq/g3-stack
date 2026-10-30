@@ -1,13 +1,16 @@
 # Dioxus patterns for g3 apps
 
-How the g3 apps use Dioxus 0.7, and the mistakes that cost us time. The rest
-of `docs/dioxus/` is the framework's own architecture notes, copied from
+How the g3 apps use Dioxus, and the mistakes that cost us time. Written
+against 0.7 and still true on the 0.8 alphas unless a line says otherwise. The
+rest of `docs/dioxus/` is the framework's own architecture notes, copied from
 upstream; this file is ours. When the two disagree about how *this* app should
 be written, this file wins.
 
-Pinned: `dioxus`, `dioxus-fullstack` and `manganis` `=0.7.9`, matching the `dx`
-CLI. Your training data probably describes 0.5 or 0.6; server functions,
-assets, signals and props all changed since.
+Pinned: `dioxus`, `dioxus-fullstack` and `manganis` `=0.8.0-alpha.3`, from the
+g3 fork of Dioxus `main` through `[patch.crates-io]`, matching a `dx` built
+from the same fork. Your training data probably describes 0.5 or 0.6; server
+functions, assets, signals and props all changed since, and on `main`
+`dioxus-core` became `dioxus-vdom` (still `dioxus::core` through the facade).
 
 ---
 
@@ -341,20 +344,26 @@ The server renders HTML and the client hydrates it; the two trees must match.
 ## Tooling
 
 - **`dx` pins:** `dioxus*` and `manganis` must match the installed `dx`
-  exactly.
-- **Do not set `rust-lld` as the linker on Windows**; `dx` builds break.
+  exactly; on the fork, build `dx` from the commit the libraries come from.
+- **`rust-lld` on Windows** broke `dx` builds in 0.7.9; the fork has the fix
+  (#5242), but nothing here needs it.
 - **Dev build speed:** `[profile.wasm-dev] debug = 0` halves `dx` rebuilds.
-- **Hot-patching does not work on fullstack apps.** A failed patch can leave a
-  wasm that imports `env` and a page stuck on "Loading". Stop `dx serve`
-  before editing Rust; the recovery is in `docs/troubleshooting.md`.
-- **`set_server_url` keeps its first value** (fixed in Dioxus 0.8): the
-  server URL of a native build must be known before `dioxus::launch`.
+- **Hot-patching** did not work on fullstack apps in 0.7.9, and the fork's
+  `dx serve` turns it on by default (#5506). A failed patch can leave a wasm
+  that imports `env` and a page stuck on "Loading". Stop `dx serve` before
+  editing Rust; the recovery is in `docs/troubleshooting.md`, and
+  `dx serve --hotpatch false` turns it off.
+- **`set_server_url` kept its first value** in 0.7.9; on the fork the latest
+  call wins (#5704). A native build still sets it before `dioxus::launch`, so
+  the first server-function call goes to the right place.
 - **A hidden tab never runs `requestAnimationFrame`.** Code that waits a frame
   (route transitions, "after first paint") stalls in a background tab or a
   hidden preview pane.
 - **Finding a borrow panic:** add
-  `generational-box = { version = "=0.7.10", features = ["debug_borrows"] }`
-  to `Cargo.toml` for one build; panics then name where the value was made.
+  `generational-box = { version = "=0.8.0-alpha.3", features = ["debug_borrows"] }`
+  to `Cargo.toml` for one build, with a `generational-box` line in
+  `[patch.crates-io]` like the other Dioxus crates (or the feature lands on a
+  second copy); panics then name where the value was made.
 - **Do not run `dx fmt` (0.7.9) on this code.** On a method chain inside a
   closure inside `rsx!` it dropped a `);` and duplicated the next statement.
   Format with `cargo fmt` (which leaves `rsx!` alone) and lay out `rsx!` by
