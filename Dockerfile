@@ -2,6 +2,8 @@
 # dependency build so an app-code change does not recompile the whole tree.
 FROM rust:1.95.0-trixie AS chef
 RUN cargo install cargo-chef
+# The web client is a wasm build; cooking its dependencies needs the target.
+RUN rustup target add wasm32-unknown-unknown
 
 # The Dioxus CLI produces the bundle.
 RUN curl -L --proto '=https' --tlsv1.2 -sSf \
@@ -26,7 +28,16 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json --locked
+# Cook exactly what `dx bundle` builds, or it recompiles every dependency: the
+# client for wasm32 with `web` under `wasm-release`, and the server with
+# `server` under `server-release`. dx always names a target, so the server cook
+# names the host triple too; without it the artifacts land in another directory.
+RUN cargo chef cook --profile wasm-release --target wasm32-unknown-unknown \
+      --no-default-features --features web \
+      --recipe-path recipe.json --locked
+RUN cargo chef cook --profile server-release --target "$(rustc -vV | sed -n 's/^host: //p')" \
+      --no-default-features --features server \
+      --recipe-path recipe.json --locked
 COPY . .
 
 # No SERVER_URL here. The web client calls the origin that served it, so one
