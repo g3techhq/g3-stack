@@ -226,6 +226,10 @@ pub async fn create_note(title: String, body: String) -> Result<Note> { .. }
 - Row types derive `Serialize, Deserialize, SurrealValue, Clone, PartialEq,
   Debug`. The insert shape is a separate struct without `id`, marked
   `#[cfg_attr(not(feature = "server"), allow(dead_code))]`.
+- **Record ids are `g3_auth::RecordId`/`RecordIdKey`, never
+  `surrealdb_types`'s.** On the server they are the same type; on the client
+  g3-auth's copy keeps SurrealDB's `Value` (regex, geometry) out of the wasm,
+  about a megabyte. A test in `src/db/utils.rs` fails on the old import.
 - `RecordId` has no `Display`. `record_key(&id)` for a URL segment.
 - Enums stored in constrained columns need `#[surreal(untagged)]` and
   `#[surreal(value = "..")]` per variant, plus the storage test from

@@ -54,8 +54,9 @@ DELETE tag WHERE owner = $user;
 ```rust
 use super::impl_id;
 use dioxus::prelude::*;
+use g3_auth::RecordId;
 use serde::{Deserialize, Serialize};
-use surrealdb_types::{Datetime, RecordId, SurrealValue};
+use surrealdb_types::{Datetime, SurrealValue};
 
 /// Mirrors `database/schema/tag.surql`.
 #[derive(Serialize, Deserialize, SurrealValue, Clone, PartialEq, Debug)]

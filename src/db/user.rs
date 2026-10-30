@@ -1,8 +1,9 @@
 use super::impl_id;
 use dioxus::prelude::*;
+use g3_auth::RecordId;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
-use surrealdb_types::{Datetime, RecordId, SurrealValue};
+use surrealdb_types::{Datetime, SurrealValue};
 
 /// Mirrors `database/schema/user.surql`.
 ///

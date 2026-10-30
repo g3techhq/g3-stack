@@ -1,4 +1,4 @@
-use surrealdb_types::RecordId;
+use g3_auth::RecordId;
 
 /// Anything that knows its own record id.
 ///
@@ -18,7 +18,7 @@ pub trait Id {
 macro_rules! impl_id {
     ($struct:ident) => {
         impl $crate::db::Id for $struct {
-            fn get_id(&self) -> surrealdb_types::RecordId {
+            fn get_id(&self) -> g3_auth::RecordId {
                 self.id.clone()
             }
         }

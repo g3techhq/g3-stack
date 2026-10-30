@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
-use surrealdb_types::{Datetime, RecordId, RecordIdKey, ToSql};
+use g3_auth::{RecordId, RecordIdKey};
+use surrealdb_types::{Datetime, ToSql};
 
 /// The plain, unquoted key of a record id, suitable for a URL path segment.
 ///
@@ -65,5 +66,50 @@ mod tests {
         // the bare key.
         let id = RecordId::new("note", "a-b");
         assert_eq!(record_key(&id), "a-b");
+    }
+
+    #[test]
+    fn record_ids_come_from_g3_auth() {
+        fn rust_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    rust_files(&path, out);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    out.push(path);
+                }
+            }
+        }
+        let mut files = Vec::new();
+        rust_files(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut files,
+        );
+        let mut offenders = Vec::new();
+        for file in files {
+            let text = std::fs::read_to_string(&file).unwrap();
+            for (at, _) in text.match_indices("surrealdb_types::") {
+                let path_end = text[at..]
+                    .find(|c: char| c == ';' || c == '(' || c == '<' || c.is_whitespace())
+                    .map_or(text.len(), |end| at + end);
+                let group_end = text[at..].find(';').map_or(text.len(), |end| at + end);
+                let end = if text[at..].starts_with("surrealdb_types::{") {
+                    group_end
+                } else {
+                    path_end
+                };
+                let names = text[at..end].split(|c: char| !(c.is_alphanumeric() || c == '_'));
+                if names
+                    .into_iter()
+                    .any(|name| name == "RecordId" || name == "RecordIdKey")
+                {
+                    offenders.push(file.display().to_string());
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "use g3_auth::RecordId instead in: {offenders:?}"
+        );
     }
 }

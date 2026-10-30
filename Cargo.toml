@@ -41,15 +41,18 @@ g3-native-plugins = { version = "0.4.4", features = [
 ] }
 # Sessions, the signed-in user, and a guard that denies by default; see
 # src/auth/session.rs. The `server` feature below turns its server side on.
-g3-auth = "0.2.0"
+# `record-id` is `g3_auth::RecordId`: SurrealDB's own on the server, and on
+# web and mobile a copy with the same wire shape that keeps SurrealDB's `Value`
+# (regex, geometry) out of the client, about a megabyte of wasm.
+g3-auth = { version = "0.2.0", features = ["record-id"] }
 # The screen cache on the device, server caches, and CDN headers for shared
 # reads. Enable its platform feature in each app feature below.
 g3-cache = "0.2.1"
 
 # --- Shared (client + server) --------------------------------------------
-# `surrealdb-types` carries the `SurrealValue` derive and the `RecordId` /
-# `Datetime` types used in structs that cross the wire, so it is NOT
-# server-only — the full `surrealdb` client below is.
+# `surrealdb-types` carries the `SurrealValue` derive and the `Datetime` type
+# used in structs that cross the wire, so it is NOT server-only — the full
+# `surrealdb` client below is. Record ids come from g3-auth (above).
 surrealdb-types = "=3.2.4"
 cfg-if = "1.0.0"
 serde = { version = "1.0", features = ["derive"] }
