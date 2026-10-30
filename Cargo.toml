@@ -219,6 +219,9 @@ manganis = { git = "https://github.com/Gateway3B/dioxus", branch = "main" }
 # The published 0.2.0-alpha.3 depends on `dioxus-core-template`, which
 # upstream renamed to `dioxus-vdom-template`.
 dioxus-icons = { git = "https://github.com/Gateway3B/dioxus-icons", branch = "main" }
+# Through g3-ui. The published 0.8.0-alpha.3 still reaches into
+# `dioxus::dioxus_core`, which the fork no longer has.
+dioxus-sdk-time = { git = "https://github.com/Gateway3B/sdk", branch = "main" }
 # g3-auth's mobile cookie jar; the published 0.2 requires Dioxus 0.7.
 dioxus-cookie = { git = "https://github.com/Gateway3B/dioxus-cookie", branch = "main" }
 # The g3 crates are not published until Dioxus 0.8.0 is.
