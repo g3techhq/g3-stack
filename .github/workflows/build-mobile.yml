@@ -78,12 +78,61 @@ jobs:
             exit 1
           }
 
+      # Signing is optional: without these secrets the bundles stay unsigned,
+      # as before. With them, the upload key signs the AAB for Play App
+      # Signing. dx reads the key from `[android.signing]` in Dioxus.toml, as
+      # plain values, so the table is added here on the runner and never
+      # committed, and the keystore is written outside the checkout.
+      - name: Check for an Android upload key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Android signing
+        if: steps.signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keystore="$RUNNER_TEMP/upload-keystore.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          # Quoted by jq: JSON's string escapes are also TOML's, so a password
+          # may hold quotes or backslashes.
+          toml() { jq -n --arg value "$1" '$value'; }
+          {
+            echo
+            echo "[android.signing]"
+            echo "jks_file = $(toml "$keystore")"
+            echo "jks_password = $(toml "$KEYSTORE_PASSWORD")"
+            echo "key_alias = $(toml "$KEY_ALIAS")"
+            echo "key_password = $(toml "$KEY_PASSWORD")"
+          } >> Dioxus.toml
+
+      # Every store upload needs a higher build number than the last; the run
+      # number only ever grows.
       - name: Build Android release bundles
+        env:
+          DX_ANDROID_VERSION_CODE: ${{ github.run_number }}
+          DX_BUNDLE_VERSION: ${{ github.run_number }}
         run: >
           dx bundle --android --release --locked --no-default-features
           --fullstack false --package-types apk --package-types aab
           --out-dir artifacts/android
 
+      - name: Remove the Android upload key
+        if: always() && steps.signing.outputs.enabled == 'true'
+        run: rm -f "$RUNNER_TEMP/upload-keystore.jks"
+
+      # Only the bundles. The Gradle project dx generates under target/ holds
+      # the signing passwords, so it must never be uploaded.
       - name: Upload Android artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -133,11 +182,69 @@ jobs:
             exit 1
           }
 
-      - name: Build unsigned iOS release bundle
-        run: >
-          dx bundle --ios --release --locked --no-default-features
-          --fullstack false --package-types ipa --codesign false
-          --out-dir artifacts/ios
+      # Signing is optional: without these secrets the IPA stays unsigned, as
+      # before. With them, an Apple Distribution certificate and an App Store
+      # provisioning profile go into a throwaway keychain and the profiles
+      # folder dx searches, and `--appstore` signs for App Store Connect.
+      - name: Check for an App Store signing identity
+        id: signing
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+        run: |
+          if [ -n "$CERTIFICATE_BASE64" ] && [ -n "$PROFILE_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install the App Store signing identity
+        if: steps.signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          certificate="$RUNNER_TEMP/distribution.p12"
+          keychain="$RUNNER_TEMP/app-signing.keychain-db"
+          profiles="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          # Never stored anywhere: the keychain only lives for this job.
+          keychain_password="$(openssl rand -base64 32)"
+
+          printf '%s' "$CERTIFICATE_BASE64" | base64 --decode > "$certificate"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          rm -f "$certificate"
+
+          mkdir -p "$profiles"
+          printf '%s' "$PROFILE_BASE64" | base64 --decode > "$profiles/appstore.mobileprovision"
+
+      # CFBundleVersion must grow with every upload, like Android's versionCode.
+      - name: Build iOS release bundle
+        shell: bash
+        env:
+          SIGNED: ${{ steps.signing.outputs.enabled }}
+          DX_BUNDLE_VERSION: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          if [ "$SIGNED" = true ]; then
+            signing=(--appstore)
+          else
+            signing=(--codesign false)
+          fi
+          dx bundle --ios --release --locked --no-default-features \
+            --fullstack false --package-types ipa "${signing[@]}" \
+            --out-dir artifacts/ios
+
+      - name: Remove the App Store signing identity
+        if: always() && steps.signing.outputs.enabled == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/appstore.mobileprovision"
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
