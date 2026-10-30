@@ -260,7 +260,7 @@ Until Dioxus 0.8.0 is published, the stack runs on
 plus the mobile-release and robustness fixes listed in its `G3-PATCHES.md`.
 `Cargo.toml` still asks for crates.io versions (`dioxus = "=0.8.0-alpha.3"`,
 `g3-ui = "0.6"`); its `[patch.crates-io]` block says where those live until
-they are published: the fork, two ecosystem crates forked to match it, and
+they are published: the fork, three ecosystem crates forked to match it, and
 the g3 libraries' `main` branches. `dx` has to come from the same fork, which
 is why the quick start builds it from git. Once 0.8.0 is out, the block goes
 and everything comes from crates.io again.
