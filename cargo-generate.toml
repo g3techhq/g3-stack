@@ -9,9 +9,13 @@
 # and the GitHub workflows, both full of braces Liquid would try to read.
 
 [template]
-cargo_generate_version = ">=0.23"
-# Each twin under both names: cargo-generate matches a local template after
-# dropping `.liquid`, and a git one before. Written by `just template`.
+# What the g3 fork's `dx` embeds. The project needs that `dx` to build at all,
+# so an older `dx new` stops here instead of generating one it cannot build.
+cargo_generate_version = ">=0.25"
+# Each twin under both names: cargo-generate matches a file after dropping
+# `.liquid`, but 0.23.3 (in `dx` 0.7.9) matched a git template's files before
+# (fixed in 0.23.4, cargo-generate#1480). The twin names cost nothing if they
+# match nothing. Written by `just template`.
 # BEGIN twins
 include = [
   ".env.surrealkit.template",

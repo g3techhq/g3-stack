@@ -111,12 +111,12 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
-      # The cargo-generate that `dx` 0.7.9 embeds: 0.23.3, not the newer one the
-      # Dioxus repository pins today. They differ in how a git template's
-      # `.liquid` files are matched.
+      # The cargo-generate that the fork's `dx` embeds (packages/cli/Cargo.toml
+      # pins it exactly). Versions differ in how a git template's `.liquid`
+      # files are matched, so check with the one `dx new` runs.
       - uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
       - name: Install cargo-generate
-        run: cargo binstall --no-confirm cargo-generate@0.23.3
+        run: cargo binstall --no-confirm cargo-generate@0.25.0
 
       # From git, as `dx new --template gh:g3techhq/g3-stack` does, rather than
       # from the folder, which cargo-generate reads differently.

@@ -27,7 +27,6 @@ permissions:
   contents: read
 
 env:
-  DIOXUS_CLI_VERSION: 0.7.9
   SERVER_URL: ${{ inputs.server_url }}
 
 jobs:
@@ -62,11 +61,11 @@ jobs:
         with:
           shared-key: mobile-android
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
-
+      # From the g3 fork the libraries come from: a `dx` built from another
+      # commit produces hydration errors. The Cargo cache above keeps the
+      # binary, so this only compiles when the fork's main has moved.
       - name: Install Dioxus CLI
-        run: cargo binstall "dioxus-cli@${DIOXUS_CLI_VERSION}" --no-confirm --force
+        run: cargo install --git https://github.com/Gateway3B/dioxus --branch main dioxus-cli --locked
 
       - name: Validate compiled configuration
         shell: bash
@@ -166,11 +165,11 @@ jobs:
         with:
           shared-key: mobile-ios
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@94dc7fe43d6ed7bfa6a6ea24f60f85e3f41dd104
-
+      # From the g3 fork the libraries come from: a `dx` built from another
+      # commit produces hydration errors. The Cargo cache above keeps the
+      # binary, so this only compiles when the fork's main has moved.
       - name: Install Dioxus CLI
-        run: cargo binstall "dioxus-cli@${DIOXUS_CLI_VERSION}" --no-confirm --force
+        run: cargo install --git https://github.com/Gateway3B/dioxus --branch main dioxus-cli --locked
 
       - name: Validate compiled configuration
         shell: bash
