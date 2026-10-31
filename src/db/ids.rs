@@ -10,7 +10,10 @@ use g3_auth::RecordId;
 /// this is API surface for your code, and the example screens happen to reach
 /// for `record_key` directly. Delete the attribute the first time something
 /// generic uses it.
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Shared definitions are used by selected platform, server or test builds."
+)]
 pub trait Id {
     fn get_id(&self) -> RecordId;
 }

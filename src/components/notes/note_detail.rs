@@ -112,6 +112,7 @@ pub fn NoteDetail(id: ReadSignal<String>) -> Element {
                         Pin { size: 20 }
                     }
                 }
+
                 Button {
                     fill: ButtonFill::Clear,
                     aria_label: "Edit",

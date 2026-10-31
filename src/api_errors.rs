@@ -8,7 +8,13 @@
 //! detail. The client then words the failure itself, where it knows what the
 //! member was doing (see `components::shared::error_message`).
 
-#![cfg_attr(not(feature = "server"), allow(dead_code))]
+#![cfg_attr(
+    not(feature = "server"),
+    allow(
+        dead_code,
+        reason = "Shared definitions are used by selected platform, server or test builds."
+    )
+)]
 
 #[cfg(feature = "server")]
 use axum::{
@@ -110,6 +116,7 @@ mod tests {
     #[test]
     fn parser_rejections_do_not_even_format_the_raw_cause() {
         struct PrivateCause;
+
         impl std::fmt::Display for PrivateCause {
             fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 panic!("a raw private cause must not be formatted");

@@ -1,15 +1,30 @@
 // `user_error_logged` records refusals without formatting private parser causes.
-#[cfg_attr(feature = "server", allow(dead_code))]
+#[cfg_attr(
+    feature = "server",
+    allow(
+        dead_code,
+        reason = "Shared definitions are used by selected platform, server or test builds."
+    )
+)]
 mod api_errors;
+
 mod app;
+
 mod auth;
+
 mod components;
+
 mod data_change;
+
 mod db;
+
 #[cfg(feature = "server")]
 mod health;
+
 mod server_url;
+
 mod state;
+
 #[cfg(feature = "server")]
 mod telemetry;
 
@@ -29,6 +44,7 @@ use surrealdb::engine::remote::ws::Client;
 use crate::app::Route;
 use crate::auth::AppUser;
 use crate::db::init_db_connection;
+
 #[cfg(debug_assertions)]
 use crate::db::sync_dev_schema;
 

@@ -9,7 +9,9 @@
 //! `database/schema/note.surql`) when you start on your own domain.
 
 mod note_detail;
+
 mod note_editor;
+
 mod note_list;
 
 pub use note_detail::*;

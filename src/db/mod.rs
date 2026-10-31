@@ -11,9 +11,13 @@
 
 #[cfg(feature = "server")]
 mod connection;
+
 mod ids;
+
 mod note;
+
 mod user;
+
 mod utils;
 
 #[cfg(feature = "server")]

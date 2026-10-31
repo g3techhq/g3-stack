@@ -28,7 +28,13 @@ impl_id!(Note);
 /// from the request body — see `create_note`.
 /// Only ever constructed inside a server-function body, which the `#[post]`
 /// macro replaces with an HTTP call on client builds - hence the `cfg_attr`.
-#[cfg_attr(not(feature = "server"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "server"),
+    allow(
+        dead_code,
+        reason = "Shared definitions are used by selected platform, server or test builds."
+    )
+)]
 #[derive(Serialize, Deserialize, SurrealValue, Clone, PartialEq, Debug)]
 pub struct CreateNote {
     pub owner: RecordId,
@@ -40,6 +46,7 @@ pub struct CreateNote {
 }
 
 pub const TITLE_MAX: usize = 120;
+
 pub const BODY_MAX: usize = 10_000;
 
 /// Trims and length-checks user input.

@@ -144,6 +144,7 @@ fn NoteForm(id: Option<String>, title: String, body: String) -> Element {
                 Button { loading: saving(), onclick: save, "Save" }
             },
         }
+
         Content { width: ContentWidth::Readable,
             Stack {
                 Input {

@@ -31,7 +31,13 @@ impl_id!(User);
 ///
 /// Only ever constructed inside a server-function body, which the `#[post]`
 /// macro replaces with an HTTP call on client builds — hence the `cfg_attr`.
-#[cfg_attr(not(feature = "server"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "server"),
+    allow(
+        dead_code,
+        reason = "Shared definitions are used by selected platform, server or test builds."
+    )
+)]
 #[derive(Serialize, Deserialize, SurrealValue, Clone, PartialEq, Debug)]
 pub struct CreateUser {
     pub handle: String,

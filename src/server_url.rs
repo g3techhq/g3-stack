@@ -6,7 +6,13 @@
 //! on every other hostname. A phone has no page origin: its server has to be
 //! compiled into the signed app.
 
-#[cfg_attr(not(feature = "mobile"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "mobile"),
+    allow(
+        dead_code,
+        reason = "Shared definitions are used by selected platform, server or test builds."
+    )
+)]
 pub fn configure() {
     #[cfg(feature = "mobile")]
     if let Some(url) = mobile_server_url() {
