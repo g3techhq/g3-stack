@@ -27,7 +27,11 @@ watch_path = ["src", "assets"]
 [bundle]
 identifier = "com.example.g3app"
 publisher = "Example"
-icon = ["assets/logo.svg"]
+# Opaque 1024×1024, rendered from assets/icon/icon.svg by
+# scripts/app-icon.mjs (`npm run icon -- assets/icon/icon.svg`). dx builds the
+# Android launcher icons from it and compiles it into the iOS asset catalog;
+# App Store Connect rejects an icon with an alpha channel.
+icon = ["assets/icon/icon-1024.png"]
 category = "Productivity"
 short_description = "An app built on the g3 stack."
 long_description = "A starter application built with Dioxus, SurrealDB, g3-ui, g3-native-plugins, and g3-route-transitions."
@@ -43,6 +47,8 @@ paths = ["/notes/*"]
 deployment_target = "15.0"
 
 [android]
-min_sdk = 35
-target_sdk = 35
-compile_sdk = 35
+# Android 8.0. Older versions stopped getting WebView updates before
+# Chromium 123, which g3-ui's light-dark() theme colors need.
+min_sdk = 26
+target_sdk = 36
+compile_sdk = 36
