@@ -27,11 +27,9 @@ watch_path = ["src", "assets"]
 [bundle]
 identifier = "{% if bundle_id != "" %}{{ bundle_id }}{% else %}com.example.{{ project-name | remove: "-" }}{% endif %}"
 publisher = "Example"
-# Opaque 1024×1024, rendered from assets/icon/icon.svg by
-# scripts/app-icon.mjs (`npm run icon -- assets/icon/icon.svg`). dx builds the
-# Android launcher icons from it and compiles it into the iOS asset catalog;
-# App Store Connect rejects an icon with an alpha channel.
-icon = ["assets/icon/icon-1024.png"]
+# The full-bleed master; dx renders the Android launcher icons from it. iOS
+# uses `[ios] icon`, and assets/icon/icon-512.png is the Play listing icon.
+icon = ["assets/icon/icon.svg"]
 category = "Productivity"
 short_description = "An app built on the g3 stack."
 long_description = "A starter application built with Dioxus, SurrealDB, g3-ui, g3-native-plugins, and g3-route-transitions."
@@ -44,6 +42,9 @@ hosts = ["app.example.com"]
 paths = ["/notes/*"]
 
 [ios]
+# Opaque, with no alpha channel: App Store Connect rejects one that has it.
+# `npm run icon -- assets/icon/icon.svg` renders it from the master.
+icon = ["assets/icon/icon-1024.png"]
 deployment_target = "15.0"
 
 [android]

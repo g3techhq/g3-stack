@@ -161,9 +161,10 @@ Before the first store submission:
 - Set `[bundle] identifier` (lowercase reverse DNS; it can never change once
   published) and `publisher` in `Dioxus.toml`, and replace the icon: draw a
   full-bleed `assets/icon/icon.svg` with the mark inside the centre 62%, then
-  `npm run icon -- assets/icon/icon.svg`. That writes the opaque 1024×1024
-  PNG that `[bundle] icon` names (dx builds the Android launcher icons from it
-  and the iOS asset catalog), and a 512×512 copy for the Play listing.
+  `npm run icon -- assets/icon/icon.svg`. dx renders the Android launcher
+  icons from the SVG (`[bundle] icon`); the script writes `icon-1024.png`,
+  the opaque RGB icon `[ios] icon` names, and `icon-512.png` for the Play
+  listing.
 - `ios/PrivacyInfo.xcprivacy` declares the required-reason APIs that Rust's
   standard library and tokio use. Add any your own code or crates call.
 - Check `[android] target_sdk` against Google Play's current target API rule,
