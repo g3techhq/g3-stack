@@ -47,9 +47,18 @@ paths = ["/notes/*"]
 icon = ["assets/icon/icon-1024.png"]
 deployment_target = "15.0"
 
+[ios.plist]
+# Phones stay in portrait: g3-ui picks its layout by width, so a phone
+# turned sideways got the tablet layout with little height left for content.
+# iPads keep dx's default and rotate. Needs dx from the Gateway3B fork
+# ("g3: let an app declare its own orientations"), or the key is written twice.
+UISupportedInterfaceOrientations = ["UIInterfaceOrientationPortrait"]
+
 [android]
 # Android 8.0. Older versions stopped getting WebView updates before
 # Chromium 123, which g3-ui's light-dark() theme colors need.
 min_sdk = 26
 target_sdk = 36
 compile_sdk = 36
+# Phones stay in portrait; tablets rotate. See the file.
+manifest = "android/AndroidManifest.xml"
