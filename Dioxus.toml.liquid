@@ -45,7 +45,9 @@ paths = ["/notes/*"]
 # Opaque, with no alpha channel: App Store Connect rejects one that has it.
 # `npm run icon -- assets/icon/icon.svg` renders it from the master.
 icon = ["assets/icon/icon-1024.png"]
-deployment_target = "15.0"
+# iOS 17.5. Older WKWebViews lack light-dark(), which g3-ui's theme colors
+# need, as Android's min_sdk below does for Chromium 123.
+deployment_target = "17.5"
 
 [ios.plist]
 # Phones stay in portrait: g3-ui picks its layout by width, so a phone
