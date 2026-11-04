@@ -148,7 +148,10 @@ pub async fn delete_note(id: String) -> Result<()> {
     db.query("DELETE $note WHERE owner = $user")
         .bind(("note", RecordId::new("note", id)))
         .bind(("user", session_user.record_id()))
-        .await?;
+        .await?
+        // A statement that failed is in the response, not the `?` above;
+        // without this a failed delete reports success.
+        .check()?;
 
     Ok(())
 }
