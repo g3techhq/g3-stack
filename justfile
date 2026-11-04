@@ -80,6 +80,11 @@ lint-strict:
     cargo clippy --all-targets --no-default-features --features server --no-deps -- -D warnings
     cargo clippy --no-default-features --features mobile --no-deps -- -D warnings
 
+# The iOS target, which nothing above compiles (macOS with Xcode only; CI runs
+# it on macos-26).
+lint-ios:
+    cargo clippy --target aarch64-apple-ios --no-default-features --features mobile --no-deps -- -D warnings
+
 test-rust:
     cargo test
     cargo test --no-default-features --features server

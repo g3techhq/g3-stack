@@ -88,6 +88,47 @@ jobs:
         if: matrix.test
         run: cargo test ${{ matrix.cargo-args }}
 
+  # The mobile row above builds for the Linux host, so nothing behind
+  # `target_os = "ios"` (the app's or the g3 crates') is compiled there. Four
+  # iOS-only compile errors reached apps that way. Same as `just lint-ios`.
+  ios:
+    name: Rust (iOS)
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # The same guard as the store build, so this lints against the SDK the
+      # IPA is built with: g3-native-plugins compiles its Swift with it.
+      - name: Require Xcode 26 or newer
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          major="$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
+          [[ "$major" -ge 26 ]] || {
+            echo "This job needs Xcode 26 or newer; this runner selects Xcode $major" >&2
+            exit 1
+          }
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          targets: aarch64-apple-ios
+          components: clippy
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ios
+
+      - name: Create the generated stylesheet
+        run: touch assets/tailwind.css
+
+      - name: Clippy
+        run: cargo clippy --target aarch64-apple-ios --no-default-features --features mobile --no-deps -- -D warnings
+
   # This repository is also the `dx new` template. Check that the twins match
   # their plain files, then generate a project the way `dx new` would and
   # type-check it under its new name. Only in the template's own repository:
