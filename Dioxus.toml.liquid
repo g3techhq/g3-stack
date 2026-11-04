@@ -53,6 +53,10 @@ deployment_target = "15.0"
 # iPads keep dx's default and rotate. Needs dx from the Gateway3B fork
 # ("g3: let an app declare its own orientations"), or the key is written twice.
 UISupportedInterfaceOrientations = ["UIInterfaceOrientationPortrait"]
+# Answers App Store Connect's export-compliance question on every upload.
+# `false` is right while the app only uses HTTPS and the OS's own encryption;
+# change it if you add encryption of your own.
+ITSAppUsesNonExemptEncryption = false
 
 [android]
 # Android 8.0. Older versions stopped getting WebView updates before

@@ -167,8 +167,13 @@ Before the first store submission:
   listing.
 - `ios/PrivacyInfo.xcprivacy` declares the required-reason APIs that Rust's
   standard library and tokio use. Add any your own code or crates call.
+- `[ios.plist] ITSAppUsesNonExemptEncryption = false` answers the export
+  compliance question for an app that only uses HTTPS. Set it to `true` if you
+  add encryption of your own.
 - Check `[android] target_sdk` against Google Play's current target API rule,
-  and that the iOS runner's Xcode is the one App Store Connect requires.
+  and the iOS job's Xcode against what App Store Connect requires. The workflow
+  runs on `macos-26` and stops unless Xcode is 26 or newer; raise both when
+  Apple raises the SDK rule.
 - Both stores require **in-app account deletion** for any app with accounts.
   The template ships it: Settings → Delete account, backed by `delete_account`
   in `src/auth/account.rs`.
