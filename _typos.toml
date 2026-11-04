@@ -9,6 +9,8 @@ extend-exclude = [
 ]
 
 [default.extend-words]
+# App Store review codes, such as ITMS-91053 in ios/PrivacyInfo.xcprivacy.
+ITMS = "ITMS"
 dioxus = "dioxus"
 surreal = "surreal"
 surrealdb = "surrealdb"
