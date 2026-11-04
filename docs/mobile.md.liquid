@@ -94,7 +94,9 @@ whether there is a session. See [authentication.md](authentication.md).
 Opening `https://app.example.com/notes/abc` on a phone with the app installed
 can open the app on that note. Three pieces:
 
-1. **Declare the domain.** `Dioxus.toml`:
+1. **Declare the domain.** The template ships the table commented out, so a
+   new app declares no domain it does not own. Uncomment it in `Dioxus.toml`
+   with your domain:
 
    ```toml
    [deep_links]
