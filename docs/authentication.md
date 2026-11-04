@@ -127,7 +127,15 @@ g3-auth = { version = "0.2", features = ["google", "apple"] }
 2. **Load the schemas.** Copy `g3_auth::APPLE_SCHEMA` into
    `database/schema/apple_challenge.surql` beside `sessions.surql`: each Apple
    attempt starts with a single-use `state` and `nonce` kept there for ten
-   minutes.
+   minutes. For Google, copy `g3_auth::GOOGLE_SCHEMA` (g3-auth's
+   `src/google.surql`) into `database/schema/google_nonce.surql`: the web
+   button first asks `/api/v1/google_signin_prepare` for a single-use nonce,
+   kept in the `google_nonce` table for an hour, and Google signs it into the
+   ID token, so a captured token cannot be posted twice. Without the table the
+   button still signs in, without a nonce. Rate-limit the prepare path like
+   the other sign-in endpoints. Once every client you ship sends a nonce,
+   `GoogleConfig::require_nonce(true)` refuses tokens without one. Builds made
+   before nonces existed send none, so wait until they are retired.
 
 3. **Say how an identity becomes a `user`** by implementing `GoogleAccounts`
    and `AppleAccounts` (one `find_or_create` each), and merge the routers
@@ -162,7 +170,19 @@ g3-auth = { version = "0.2", features = ["google", "apple"] }
    carries a refresh token; keep it with the account and call
    `g3_auth::apple::revoke_token(client_id, refresh_token)` from
    `delete_account`, or App Store review (guideline 5.1.1(v)) can reject the
-   app.
+   app. Without `APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY` (or
+   `APPLE_PRIVATE_KEY_PATH`) at sign-in, no refresh token is stored, and that
+   account cannot be revoked later. `apple_router` logs a warning at startup
+   when Apple is configured without the key (it names the variables, never a
+   value).
+
+6. **Set `APP_ORIGIN` for Apple on the web.** Apple returns a web sign-in to
+   `APP_ORIGIN` (or `AppleConfig::origin`), the app's public origin such as
+   `https://example.com`. A debug build without it uses
+   `http://localhost:8080`. A release build with `APPLE_SERVICES_ID` set (the
+   web flow on) and no `APP_ORIGIN`, or one that is not an http(s) URL,
+   panics when `apple_router` is built, rather than sending visitors to
+   localhost. Put it in every deployed environment's configuration.
 
 ### What `g3-auth` checks for you
 
@@ -240,6 +260,16 @@ provider or an emailed one-time code.
 every row the account owns and then the account, in one transaction, and ends
 the session. Apple and Google both require in-app deletion for apps with
 accounts.
+
+On a phone the session cookie lives in the app's own jar (the Keychain on
+iOS, the Keystore on Android; see `g3_auth::init` in `main.rs`), which the
+server's sign-out cannot reach. Settings calls `g3_auth::forget_native_session()`
+once `delete_account` succeeds, so the deleted account's cookie does not stay
+on the device. It does nothing on the web and the server. It clears only what
+g3-auth stores: data the app keeps through g3-native-plugins' storage is the
+app's to clear with `g3_native_plugins::clear_storage()`, which on the web
+empties the whole origin's `localStorage`, so decide per app. (The template
+keeps nothing there.)
 
 **When you add a table with an `owner` field, add it to
 `DELETE_ACCOUNT_QUERY`.** A test reads `database/schema/` and fails the build if
