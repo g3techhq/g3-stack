@@ -36,8 +36,14 @@ for server-side token validation. See [authentication.md](authentication.md#oaut
 ## Building
 
 ```bash
-docker build -t my-app:latest .
+rev=$(grep -m1 -oE 'Gateway3B/dioxus\?branch=main#[0-9a-f]{40}' Cargo.lock | cut -d'#' -f2)
+docker build --build-arg DIOXUS_REV="$rev" -t my-app:latest .
 ```
+
+`DIOXUS_REV` is the Dioxus fork commit `Cargo.lock` pins. The Dockerfile copies
+`dx` from `ghcr.io/gateway3b/dioxus-cli:<commit>`, which the fork's "g3 CLI
+image" workflow publishes for each commit, instead of compiling it, so the CLI
+always matches the libraries.
 
 The Dockerfile uses `cargo-chef`, so a dependency layer is cached and an
 app-code change rebuilds only the app. The first build is slow — it compiles the

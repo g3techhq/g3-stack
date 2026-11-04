@@ -1,3 +1,9 @@
+# `dx` comes from the CLI image for the Dioxus fork commit Cargo.lock pins,
+# built once by the fork's "g3 CLI image" workflow; the image build passes that
+# commit as DIOXUS_REV. A CLI from another commit fails to hydrate.
+ARG DIOXUS_REV
+FROM ghcr.io/gateway3b/dioxus-cli:${DIOXUS_REV} AS dioxus-cli
+
 # Multi-stage build for the fullstack web server. `cargo-chef` caches the
 # dependency build so an app-code change does not recompile the whole tree.
 FROM rust:1.95.0-trixie AS chef
@@ -10,12 +16,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends clang llvm curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# The Dioxus CLI produces the bundle. Until Dioxus 0.8.0 it is built from the
-# g3 fork the libraries come from: a `dx` from another commit produces
-# hydration errors. This layer is cached by its text, so it keeps whatever the
-# fork's main was when it was built; rebuild without the cache after the fork
-# moves.
-RUN cargo install --git https://github.com/Gateway3B/dioxus --branch main dioxus-cli --locked --root /.cargo
+# The Dioxus CLI produces the bundle. Until Dioxus 0.8.0 it is the g3 fork's
+# build for the exact commit Cargo.lock pins (see the top of this file), so a
+# cached layer can never hold a CLI from another commit.
+COPY --from=dioxus-cli /dx /.cargo/bin/dx
 ENV PATH="/.cargo/bin:$PATH"
 
 # `getrandom` needs to be told it is running in a browser on the wasm target.
