@@ -116,7 +116,7 @@ Google and Apple are `g3-auth` features, so the button, the callback, the token
 checks and the CSRF protection are not yours to write:
 
 ```toml
-g3-auth = { version = "0.1", features = ["google", "apple"] }
+g3-auth = { version = "0.2", features = ["google", "apple"] }
 ```
 
 1. **A way to find the account**, in `database/schema/user.surql`, with a unique
