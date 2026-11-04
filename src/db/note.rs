@@ -88,7 +88,8 @@ pub async fn list_notes() -> Result<Vec<Note>> {
 /// who can guess a record id can read anyone's note — and the id is right
 /// there in the URL. Answering `None` rather than "forbidden" also avoids
 /// confirming that the id exists at all.
-#[post("/api/v1/get_note", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
+/// `#[get]`, like every read: the id travels as a query parameter.
+#[get("/api/v1/note?id", crate::StateExtractor { db, session_user, .. }: crate::StateExtractor)]
 pub async fn get_note(id: String) -> Result<Option<Note>> {
     Ok(db
         .query("SELECT * FROM $note WHERE owner = $user")
