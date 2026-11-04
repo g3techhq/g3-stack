@@ -93,7 +93,12 @@ fn Account() -> Element {
         {
             return;
         }
-        let _ = sign_out().await;
+        // On a failure the session is still live, and the splash would only
+        // send the user straight back into the app, so say so and stay.
+        if let Err(error) = sign_out().await {
+            toast.error(format!("Could not sign out: {}", error_message(&error)));
+            return;
+        }
         // Clearing `user` before navigating, so no screen renders for a
         // frame against an account the server has already forgotten. The
         // splash then re-asks and routes onward.
