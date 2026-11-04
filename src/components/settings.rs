@@ -6,7 +6,7 @@ use crate::{
     state::AppState,
 };
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{ClipboardCopy, ExternalLink, Share2};
+use dioxus_icons::lucide::{ClipboardCopy, ExternalLink, FileText, Share2, Shield};
 use g3_ui::{
     Button, ButtonExpand, ButtonFill, Card, Color, Item, ItemDetail, List, ListLines, ListVariant,
     SegmentButton, SegmentGroup, Stack, Text, TextTone, use_alert, use_toast,
@@ -25,6 +25,7 @@ pub fn Settings() -> Element {
             Appearance {}
             NativePluginDemos {}
             Account {}
+            Legal {}
         }
     }
 }
@@ -159,6 +160,96 @@ fn Account() -> Element {
             onclick: delete_clicked,
             "Delete account"
         }
+    }
+}
+
+/// The privacy policy, read when `dx` builds the app: set `PRIVACY_POLICY_URL`
+/// in its environment or in `.env` (`build.rs`). Apple requires a link to it
+/// inside the app (guideline 5.1.1(i)), and both stores want the same URL in
+/// the listing. See docs/mobile.md, "Releasing".
+const PRIVACY_POLICY_URL: Option<&str> = option_env!("PRIVACY_POLICY_URL");
+
+/// The terms of use, read the same way from `TERMS_URL`.
+const TERMS_URL: Option<&str> = option_env!("TERMS_URL");
+
+/// A configured link, or `None` for an unset or empty one.
+fn legal_link(url: Option<&'static str>) -> Option<&'static str> {
+    url.map(str::trim).filter(|url| !url.is_empty())
+}
+
+/// Links to the privacy policy and terms, each shown when configured.
+///
+/// Both builds read the same compile-time values, so the server and the
+/// hydrating client agree on whether a row exists; only the open is gated.
+#[component]
+fn Legal() -> Element {
+    #[cfg(any(
+        all(feature = "web", target_arch = "wasm32"),
+        target_os = "android",
+        target_os = "ios"
+    ))]
+    let toast = use_toast();
+
+    #[cfg(any(
+        all(feature = "web", target_arch = "wasm32"),
+        target_os = "android",
+        target_os = "ios"
+    ))]
+    let plugins = use_context::<g3_native_plugins::NativePlugins>();
+
+    let privacy = legal_link(PRIVACY_POLICY_URL);
+    let terms = legal_link(TERMS_URL);
+    if privacy.is_none() && terms.is_none() {
+        return rsx! {};
+    }
+
+    // In the system browser, not the app's webview: a page there would
+    // replace the app, with no way back.
+    let open = move |url: &'static str| {
+        cfg_if::cfg_if! { if #[cfg(any(all(feature = "web", target_arch = "wasm32"), target_os = "android", target_os = "ios"))] {
+            let mut plugins = plugins;
+            if let Err(error) = plugins.external_url.write().open(url) {
+                toast.error(format!("Could not open the browser: {error}"));
+            }
+        } else {
+            let _ = url;
+        }}
+    };
+
+    rsx! {
+        Card { title: "Legal",
+            List { variant: ListVariant::EdgeToEdge, lines: ListLines::Inset,
+                if let Some(url) = privacy {
+                    Item {
+                        start: rsx! { Shield { size: 20 } },
+                        label: "Privacy policy",
+                        onclick: move |_| open(url),
+                    }
+                }
+                if let Some(url) = terms {
+                    Item {
+                        start: rsx! { FileText { size: 20 } },
+                        label: "Terms of use",
+                        onclick: move |_| open(url),
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::legal_link;
+
+    #[test]
+    fn an_unset_or_blank_legal_link_shows_no_row() {
+        assert_eq!(legal_link(None), None);
+        assert_eq!(legal_link(Some("  ")), None);
+        assert_eq!(
+            legal_link(Some(" https://example.com/privacy ")),
+            Some("https://example.com/privacy")
+        );
     }
 }
 

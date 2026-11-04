@@ -1,9 +1,10 @@
 //! Makes the public build-time ids visible to the client.
 //!
-//! The browser client reads `GOOGLE_OAUTH_CLIENT_ID` and `APPLE_SERVICES_ID`
-//! with `option_env!`, so they must be in the environment of `dx build`. In
-//! development that environment is a shell that has not loaded `.env`, so this
-//! reads `.env` for the names below when the shell does not already have them.
+//! The client reads `GOOGLE_OAUTH_CLIENT_ID`, `APPLE_SERVICES_ID`,
+//! `PRIVACY_POLICY_URL` and `TERMS_URL` with `option_env!`, so they must be in
+//! the environment of `dx build`. In development that environment is a shell
+//! that has not loaded `.env`, so this reads `.env` for the names below when
+//! the shell does not already have them.
 //!
 //! Only public identifiers belong in the list. A secret named here would be
 //! compiled into the WASM bundle for anyone to read.
@@ -15,7 +16,13 @@
 
 use std::{env, fs};
 
-const PUBLIC_BUILD_VARIABLES: [&str; 2] = ["GOOGLE_OAUTH_CLIENT_ID", "APPLE_SERVICES_ID"];
+// The legal links are public by nature: Settings shows them to everyone.
+const PUBLIC_BUILD_VARIABLES: [&str; 4] = [
+    "GOOGLE_OAUTH_CLIENT_ID",
+    "APPLE_SERVICES_ID",
+    "PRIVACY_POLICY_URL",
+    "TERMS_URL",
+];
 
 fn main() {
     println!("cargo:rerun-if-changed=.env");

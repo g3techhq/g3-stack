@@ -179,3 +179,11 @@ Before the first store submission:
   in `src/auth/account.rs`.
 - Both stores require a privacy policy URL, and Apple requires Sign in with
   Apple if you offer any other third-party sign-in.
+- **Privacy policy and terms in the app.** Apple also wants the privacy
+  policy reachable from inside the app (guideline 5.1.1(i)). Settings shows a
+  **Legal** card with a row for each of `PRIVACY_POLICY_URL` and `TERMS_URL`,
+  opened in the system browser, when they are set at build time: in the
+  shell or CI environment that runs `dx bundle` (the mobile workflow reads the
+  repository variables of the same names), or in `.env`, which `build.rs`
+  reads. The web image takes them as build arguments. Unset, the card is not
+  shown, so set at least the privacy policy before a store build.

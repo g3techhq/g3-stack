@@ -28,6 +28,10 @@ permissions:
 
 env:
   SERVER_URL: ${{ inputs.server_url }}
+  # Shown in Settings → Legal; set them as repository variables. See
+  # docs/mobile.md, "Releasing".
+  PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL }}
+  TERMS_URL: ${{ vars.TERMS_URL }}
 
 jobs:
   android:

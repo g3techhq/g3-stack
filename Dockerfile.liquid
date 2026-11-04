@@ -55,6 +55,10 @@ COPY . .
 # The fork defaults release builds to no debug symbols (#5912) and fails on a
 # wasm-opt error (#6027); drop the flag once a release build is seen running
 # wasm-opt.
+# The legal links Settings shows are compiled into the client (src/components/settings.rs):
+# `docker build --build-arg PRIVACY_POLICY_URL=https://.. --build-arg TERMS_URL=https://..`.
+ARG PRIVACY_POLICY_URL=
+ARG TERMS_URL=
 RUN dx bundle --platform web -r --locked --debug-symbols false
 
 FROM debian:trixie-slim AS runtime
