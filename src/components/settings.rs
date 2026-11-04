@@ -120,6 +120,15 @@ fn Account() -> Element {
         }
         match delete_account().await {
             Ok(()) => {
+                // A phone keeps the session cookie in its own jar (Keychain,
+                // Keystore), out of the server's reach. The account and its
+                // sessions are already gone, so a failure here leaves only a
+                // dead cookie: report it in the log, not to the user.
+                if let Err(error) = g3_auth::forget_native_session() {
+                    dioxus::logger::tracing::warn!(
+                        "could not clear the native session cookie: {error}"
+                    );
+                }
                 app_state.user.set(None);
                 toast.show("Account deleted.");
                 // `replace`: the page this entry points at belonged to an
