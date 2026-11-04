@@ -17,7 +17,7 @@
     "icon": "node scripts/app-icon.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.12",
+    "@biomejs/biome": "2.6.4",
     "@playwright/test": "^1.56.1"
   }
 }
