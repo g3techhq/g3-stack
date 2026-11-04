@@ -143,7 +143,10 @@ jobs:
   ios:
     name: iOS IPA
     if: inputs.platform == 'both' || inputs.platform == 'ios'
-    runs-on: macos-15
+    # App Store Connect only accepts builds made with the iOS 26 SDK (Xcode 26)
+    # since 2026-04-28. macos-15 defaults to Xcode 16, and the SDK is recorded
+    # in the bundle, so re-signing an IPA built there cannot fix it.
+    runs-on: macos-26
     timeout-minutes: 90
 
     steps:
@@ -151,6 +154,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # Fails here, not at upload, if the image's default Xcode ever moves back.
+      - name: Require Xcode 26 or newer
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          major="$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
+          [[ "$major" -ge 26 ]] || {
+            echo "App Store uploads need Xcode 26 or newer; this runner selects Xcode $major" >&2
+            exit 1
+          }
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
