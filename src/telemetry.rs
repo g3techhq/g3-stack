@@ -30,7 +30,11 @@ where
 
 pub fn init() {
     tracing::subscriber::set_global_default(subscriber(std::io::stderr))
-        .unwrap_or_else(|_| panic!("Failed to install the privacy-safe runtime logger."));
+        // The error's text is fixed by tracing ("a global default trace
+        // dispatcher has already been set") and carries no payload.
+        .unwrap_or_else(|error| {
+            panic!("Failed to install the privacy-safe runtime logger: {error}")
+        });
 }
 
 fn completed(route: &str, status: u16, duration_ms: u64) {

@@ -293,7 +293,10 @@ The event matches g3-platform's approved forwarding pipeline.
 The request layer precedes the final health-router merge. Probes have their own
 telemetry layer and still bypass sessions, authentication and rate limits. A DB
 readiness failure prints a fixed operation label rather than the raw cause.
-Startup connection/session failures also avoid formatting private diagnostics.
+Startup connection/session failures also avoid formatting private diagnostics:
+each step in `init_db_connection` wraps its error in a fixed message naming the
+step and the variables to check (`SURREALDB_HOST`, `SURREALDB_USER`, ...), and
+`main` prints only that message, never the driver's error beneath it.
 
 This limits the new request events; it does not prove existing direct stdout,
 stderr, panics, provider SDKs, host/proxy logs or remote retention are safe. Audit

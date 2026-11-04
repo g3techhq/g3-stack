@@ -59,10 +59,14 @@ fn main() {
     crate::telemetry::init();
 
     dioxus::serve(|| async move {
+        // Startup failures name the step and the variables to check, never
+        // the underlying error: `{error}` on an anyhow error prints only its
+        // outermost context, which `init_db_connection` writes for each step.
+        // The driver's own text stays out of the log (see telemetry.rs).
         let db = Arc::new(
             init_db_connection()
                 .await
-                .unwrap_or_else(|_| panic!("Failed to connect to SurrealDB. Is it running (`just db-up`), and is .env filled in?")),
+                .unwrap_or_else(|error| panic!("Failed to connect to SurrealDB: {error}")),
         );
 
         // Debug builds keep the running database in step with
@@ -87,7 +91,9 @@ fn main() {
             session_config,
         )
         .await
-        .unwrap_or_else(|_| panic!("Failed to create the session store."));
+        .unwrap_or_else(|_| {
+            panic!("Failed to create the session store: could not create or read its `sessions` table in SurrealDB. Check that SURREALDB_USER may define tables.")
+        });
 
         // Signed-out page loads go to the splash; `#[public]` on `Route` and on
         // server functions marks what they may reach. Panics here, at startup,

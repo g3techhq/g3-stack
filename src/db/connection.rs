@@ -1,5 +1,3 @@
-use dioxus::prelude::Result;
-
 #[cfg(debug_assertions)]
 use surrealdb::engine::any::connect;
 use surrealdb::{
@@ -41,15 +39,24 @@ fn any_connector_endpoint(host: &str) -> String {
 
 /// Opens the long-lived connection every server function shares through
 /// `StateExtractor`. Called once, from `main`.
-pub async fn init_db_connection() -> Result<Surreal<Client>> {
+///
+/// Each step's error names the step and the variables behind it, and nothing
+/// else: `main` prints only that outermost message, so a startup failure says
+/// what to fix without the driver's text, which can echo a host or a query.
+pub async fn init_db_connection() -> anyhow::Result<Surreal<Client>> {
+    use anyhow::Context;
+
     let db = Surreal::<Client>::init();
     let host = surrealdb_host();
 
-    db.connect::<Ws>(ws_connector_host(&host)).await?;
+    db.connect::<Ws>(ws_connector_host(&host))
+        .await
+        .context("Could not reach SurrealDB at SURREALDB_HOST. Is it running (`just db-up`)?")?;
     authenticate(&db).await?;
     db.use_ns(env("SURREALDB_NAMESPACE"))
         .use_db(env("SURREALDB_NAME"))
-        .await?;
+        .await
+        .context("Could not select SURREALDB_NAMESPACE and SURREALDB_NAME in SurrealDB.")?;
 
     Ok(db)
 }
@@ -76,10 +83,17 @@ pub async fn sync_dev_schema() -> anyhow::Result<()> {
 // available for existing local environments; production opts into database auth.
 #[cfg(feature = "server")]
 async fn authenticate<C: surrealdb::Connection>(db: &Surreal<C>) -> anyhow::Result<()> {
-    let read = |key: &str| std::env::var(key);
+    use anyhow::Context;
+
+    // `VarError` does not say which variable, so each read names its own.
+    let read = |key: &'static str| {
+        std::env::var(key).with_context(|| {
+            format!("{key} is not set. Copy .env.template to .env and fill it in.")
+        })
+    };
     let username = read("SURREALDB_USER")?;
     let password = read("SURREALDB_PASSWORD")?;
-    match read("SURREALDB_AUTH_LEVEL")
+    match std::env::var("SURREALDB_AUTH_LEVEL")
         .unwrap_or_else(|_| "root".into())
         .as_str()
     {
@@ -90,10 +104,13 @@ async fn authenticate<C: surrealdb::Connection>(db: &Surreal<C>) -> anyhow::Resu
                 username,
                 password,
             })
-            .await?;
+            .await
+            .context("SurrealDB refused SURREALDB_USER and SURREALDB_PASSWORD as a database user (SURREALDB_AUTH_LEVEL=database) for SURREALDB_NAMESPACE and SURREALDB_NAME.")?;
         }
         "root" => {
-            db.signin(Root { username, password }).await?;
+            db.signin(Root { username, password })
+                .await
+                .context("SurrealDB refused SURREALDB_USER and SURREALDB_PASSWORD as a root user (SURREALDB_AUTH_LEVEL=root).")?;
         }
         _ => anyhow::bail!("SURREALDB_AUTH_LEVEL must be root or database"),
     }
@@ -103,6 +120,16 @@ async fn authenticate<C: surrealdb::Connection>(db: &Surreal<C>) -> anyhow::Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_startup_error_prints_its_step_and_not_the_driver_text() {
+        use anyhow::Context;
+        // `main` panics with `{error}`: only the context written here may show.
+        let failed: anyhow::Result<()> = Err(anyhow::anyhow!("driver text: ws://user:secret@db"))
+            .context("Could not reach SurrealDB at SURREALDB_HOST.");
+        let shown = format!("{}", failed.unwrap_err());
+        assert_eq!(shown, "Could not reach SurrealDB at SURREALDB_HOST.");
+    }
 
     #[test]
     fn both_connectors_accept_a_host_written_either_way() {
