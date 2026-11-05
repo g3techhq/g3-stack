@@ -13,11 +13,11 @@ your own domain.
 | Piece | Version | Reference |
 | --- | --- | --- |
 | Dioxus (fullstack, router) | 0.8.0-alpha.3, pinned `=`, from the [g3 fork](https://github.com/Gateway3B/dioxus) of `main` | [docs/dioxus/](docs/dioxus/README.md), [dioxuslabs.com/learn/0.7](https://dioxuslabs.com/learn/0.7/) |
-| g3-ui (components, theme) | 0.6 | [docs/g3-ui.md](docs/g3-ui.md) |
-| g3-route-transitions (navigation) | 0.5 | [docs/navigation.md](docs/navigation.md) |
+| g3-ui (components, theme) | 0.7 | [docs/g3-ui.md](docs/g3-ui.md) |
+| g3-route-transitions (navigation) | 0.6 | [docs/navigation.md](docs/navigation.md) |
 | g3-native-plugins (device APIs) | 0.4 | [docs/native-plugins.md](docs/native-plugins.md) |
 | g3-auth (session guard, `#[public]`, `RecordId`) | 0.2 | [docs/authentication.md](docs/authentication.md) |
-| g3-cache (client, server and CDN caches) | 0.2 | [docs/architecture.md](docs/architecture.md#data-and-the-caches) |
+| g3-cache (client, server and CDN caches) | 0.3 | [docs/architecture.md](docs/architecture.md#data-and-the-caches) |
 | SurrealDB + SurrealKit | 3.2.4 / 0.6.3 | [database/README.md](database/README.md) |
 | Tailwind (layout utilities only) | v4, run by `dx` | [docs/styling.md](docs/styling.md) |
 
