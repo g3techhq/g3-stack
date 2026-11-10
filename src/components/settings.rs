@@ -36,40 +36,55 @@ pub fn Settings() -> Element {
 /// Both groups show `AppState`'s own signals and only report a pick
 /// (`defer_selection`): `set_appearance` applies and saves it, so there is no
 /// second copy here to fall out of step with a preference loaded later.
+/// A change grows over the page in a circle from the click.
 #[component]
 fn Appearance() -> Element {
-    let mut app_state = use_context::<AppState>();
+    let app_state = use_context::<AppState>();
+    let mut origin = use_signal(|| None::<(f64, f64)>);
+    let choose = move |appearance: AppearanceMode, scheme: ColorScheme| {
+        spawn(async move {
+            let mut app_state = app_state;
+            g3_ui::reveal_theme(origin(), move || {
+                app_state.set_appearance(appearance, scheme)
+            })
+            .await;
+        });
+    };
 
     rsx! {
         Card { title: "Appearance",
-            Stack {
-                Text { tone: TextTone::Secondary,
-                    "iOS and Material are Ionic's two modes. Switching restyles every component "
-                    "and changes how the next screen animates in. Auto follows the device."
-                }
-                SegmentGroup {
-                    value: app_state.appearance,
-                    label: "Style",
-                    defer_selection: true,
-                    onchange: move |appearance: AppearanceMode| {
-                        let scheme = *app_state.color_scheme.peek();
-                        app_state.set_appearance(appearance, scheme);
-                    },
-                    SegmentButton { value: AppearanceMode::Auto, "Auto" }
-                    SegmentButton { value: AppearanceMode::Ios, "iOS" }
-                    SegmentButton { value: AppearanceMode::Md, "Material" }
-                }
-                SegmentGroup {
-                    value: app_state.color_scheme,
-                    label: "Theme",
-                    defer_selection: true,
-                    onchange: move |scheme: ColorScheme| {
-                        let appearance = *app_state.appearance.peek();
-                        app_state.set_appearance(appearance, scheme);
-                    },
-                    SegmentButton { value: ColorScheme::Auto, "Auto" }
-                    SegmentButton { value: ColorScheme::Dark, "Dark" }
-                    SegmentButton { value: ColorScheme::Light, "Light" }
+            div {
+                onpointerdown: move |e| {
+                    let p = e.client_coordinates();
+                    origin.set(Some((p.x, p.y)));
+                },
+                Stack {
+                    Text { tone: TextTone::Secondary,
+                        "iOS and Material are Ionic's two modes. Switching restyles every component "
+                        "and changes how the next screen animates in. Auto follows the device."
+                    }
+                    SegmentGroup {
+                        value: app_state.appearance,
+                        label: "Style",
+                        defer_selection: true,
+                        onchange: move |appearance: AppearanceMode| {
+                            choose(appearance, *app_state.color_scheme.peek());
+                        },
+                        SegmentButton { value: AppearanceMode::Auto, "Auto" }
+                        SegmentButton { value: AppearanceMode::Ios, "iOS" }
+                        SegmentButton { value: AppearanceMode::Md, "Material" }
+                    }
+                    SegmentGroup {
+                        value: app_state.color_scheme,
+                        label: "Theme",
+                        defer_selection: true,
+                        onchange: move |scheme: ColorScheme| {
+                            choose(*app_state.appearance.peek(), scheme);
+                        },
+                        SegmentButton { value: ColorScheme::Auto, "Auto" }
+                        SegmentButton { value: ColorScheme::Dark, "Dark" }
+                        SegmentButton { value: ColorScheme::Light, "Light" }
+                    }
                 }
             }
         }
