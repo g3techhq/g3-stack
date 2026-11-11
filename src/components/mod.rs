@@ -16,7 +16,10 @@ pub mod shared;
 
 mod shell;
 
+mod updates;
+
 pub use auth::*;
 pub use notes::*;
 pub use settings::*;
 pub use shell::*;
+pub use updates::*;

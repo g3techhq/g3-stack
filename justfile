@@ -19,9 +19,10 @@ setup:
 dev:
     dx serve
 
-# Android emulator/device.
+# Android emulator/device, as a sideloaded dev build: it has the in-app
+# updater (`sideload`). Never the build for Google Play; see docs/mobile.md.
 dev-android:
-    dx serve --platform android
+    dx serve --platform android --features sideload
 
 # iOS simulator (macOS only).
 dev-ios:
@@ -48,6 +49,14 @@ db-sync:
 db-seed:
     surrealkit seed
 
+# --- Release --------------------------------------------------------------
+
+# Build a debug-signed APK with the updater and publish it to g3techhq/releases
+# (needs `../releases` and the app's key in ~/.g3-release). For example
+# `just publish-dev --version 0.1.1 --notes @notes.md`; docs/deployment.md.
+publish-dev *args:
+    node scripts/publish-dev.mjs {{args}}
+
 # --- Quality --------------------------------------------------------------
 
 format:
@@ -58,7 +67,7 @@ format-check:
     cargo fmt --all -- --check
     npm run format:web:check
 
-check: check-web check-server check-mobile
+check: check-web check-server check-mobile check-sideload
 
 check-web:
     cargo check
@@ -69,16 +78,22 @@ check-server:
 check-mobile:
     cargo check --no-default-features --features mobile
 
+# The sideloaded Android build, with the in-app updater.
+check-sideload:
+    cargo check --no-default-features --features mobile,sideload
+
 lint:
     cargo clippy --all-targets --no-deps
     cargo clippy --all-targets --no-default-features --features server --no-deps
     cargo clippy --no-default-features --features mobile --no-deps
+    cargo clippy --no-default-features --features mobile,sideload --no-deps
     npm run lint:web
 
 lint-strict:
     cargo clippy --all-targets --no-deps -- -D warnings
     cargo clippy --all-targets --no-default-features --features server --no-deps -- -D warnings
     cargo clippy --no-default-features --features mobile --no-deps -- -D warnings
+    cargo clippy --no-default-features --features mobile,sideload --no-deps -- -D warnings
 
 # The iOS target, which nothing above compiles (macOS with Xcode only; CI runs
 # it on macos-26).

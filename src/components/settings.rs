@@ -1,7 +1,10 @@
 use crate::{
     app::Route,
     auth::{delete_account, sign_out},
-    components::shared::{confirm_destructive, error_message},
+    components::{
+        AppUpdates,
+        shared::{confirm_destructive, error_message},
+    },
     db::{AppearanceMode, ColorScheme},
     state::AppState,
 };
@@ -12,7 +15,7 @@ use g3_ui::{
     SegmentButton, SegmentGroup, Stack, Text, TextTone, use_alert, use_toast,
 };
 
-/// Appearance, native-plugin demos, and the account.
+/// Appearance, native-plugin demos, the account, and app updates.
 ///
 /// The appearance controls are the interesting part: they drive both g3-ui's
 /// component mode and g3-route-transitions' motion language from one place
@@ -25,6 +28,8 @@ pub fn Settings() -> Element {
             Appearance {}
             NativePluginDemos {}
             Account {}
+            // Empty outside the sideloaded build.
+            AppUpdates {}
             Legal {}
         }
     }

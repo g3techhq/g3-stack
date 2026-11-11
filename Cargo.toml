@@ -98,6 +98,18 @@ mobile = [
     "tokio",
 ]
 
+# A debug-signed Android APK people install by hand (a dev build): it checks
+# g3techhq/releases and installs its own updates. `updater-install` declares
+# REQUEST_INSTALL_PACKAGES, which Google Play restricts, so a Play or App
+# Store build never enables this; build with `--features mobile,sideload`.
+# A desktop feature, if the app adds one, enables `g3-native-plugins/updater`
+# itself, since a desktop build always installs its own updates. See
+# docs/deployment.md, "In-app updates".
+sideload = [
+    "g3-native-plugins/updater",
+    "g3-native-plugins/updater-install",
+]
+
 server = [
     "dep:tracing",
     "dep:tracing-subscriber",

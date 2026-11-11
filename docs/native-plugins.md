@@ -29,7 +29,7 @@ g3-native-plugins = { version = "0.4.4", features = ["back-button", "clipboard",
 | `in-app-purchases` | yes | yes | — | StoreKit 2 and Play Billing: products, purchases, subscriptions, restore |
 | `notifications` | yes | yes | — | Local notifications, shown now or scheduled, with buttons, replies and Android channels |
 | `push-notifications` | yes | yes | — | APNs and Firebase Cloud Messaging: tokens, messages and taps. Needs a Firebase project on Android |
-| `updater` | yes | yes | — | Signed over-the-air updates of the web bundle the WebView loads (never the Rust binary) |
+| `updater` | yes | yes | — | Updates the installed app from signed releases: an APK (with `updater-install`), desktop installers, iOS ad hoc builds. The template's `sideload` feature wires it up; see [deployment.md](deployment.md#in-app-updates) |
 
 "—" means the calls compile and do nothing. **A plugin never fails the build on
 a platform it does not support**, which is what lets one dependency line serve

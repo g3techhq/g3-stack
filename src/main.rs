@@ -25,6 +25,8 @@ mod server_url;
 
 mod state;
 
+mod updater;
+
 #[cfg(feature = "server")]
 mod telemetry;
 
@@ -138,5 +140,8 @@ fn main() {
     g3_auth::init();
 
     server_url::configure();
+    // Before launch too, so the update prompt finds the updater ready. Only
+    // the sideloaded build has one.
+    updater::configure();
     dioxus::launch(App);
 }

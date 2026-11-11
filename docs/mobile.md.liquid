@@ -28,6 +28,11 @@ just dev-ios       # the iOS simulator
 `dx serve --platform android|ios` runs the fullstack server on your machine and
 points the app at it, so in development there is nothing to configure.
 
+`just dev-android` builds with the `sideload` feature: a dev APK that checks
+g3techhq/releases and installs its own updates once the app has a release key
+(see [deployment.md](deployment.md#in-app-updates)). The store builds below
+never enable it. `just publish-dev` publishes such a build.
+
 ---
 
 ## How a phone talks to the server

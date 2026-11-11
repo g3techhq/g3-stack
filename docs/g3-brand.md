@@ -12,6 +12,14 @@ the last good answer on refresh failure. Use a stable configured central HTTPS
 endpoint without forwarding session cookies or user IDs. Refresh on section open
 and foreground with the client's bounded interval.
 
+The template's own in-app updater (`src/updater.rs`, `src/components/updates.rs`,
+see [deployment.md](deployment.md#in-app-updates)) uses only the public
+g3-native-plugins. An app that depends on g3-brand can use g3-brand's `updater`
+feature instead: its `configure_updater`, `UpdatePrompt` and `AppUpdates` do the
+same, styled with the rest of its UI. Enable it in the `sideload` feature in
+place of `g3-native-plugins/updater`, keep `g3-native-plugins/updater-install`,
+and delete the template's copies.
+
 Provide the stable app ID/channel and actual native installed metadata. Native
 metadata comes from g3-native-plugins' app-info implementation once released; do
 not replace it with a content-bundle version. The external-url plugin opens store

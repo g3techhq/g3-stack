@@ -40,6 +40,10 @@ jobs:
           - target: mobile
             cargo-args: --no-default-features --features mobile
             test: false
+          # The sideloaded dev APK, with the in-app updater.
+          - target: sideload
+            cargo-args: --no-default-features --features mobile,sideload
+            test: false
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -55,7 +59,7 @@ jobs:
       # `dioxus/mobile` builds wry, which links the system WebView even when
       # the host is only type-checking.
       - name: Install WebView libraries
-        if: matrix.target == 'mobile'
+        if: matrix.target == 'mobile' || matrix.target == 'sideload'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \

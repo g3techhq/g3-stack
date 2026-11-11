@@ -201,3 +201,47 @@ APK/AAB and the iOS IPA for 14 days, numbered with the run number so each
 upload outnumbers the last. They are signed for the stores only when the
 signing secrets in [mobile.md](mobile.md#releasing) are set; otherwise treat
 them as compile outputs.
+
+## In-app updates
+
+Dev builds update themselves. A debug-signed APK installed by hand (the
+`sideload` feature, which `just dev-android` and `just publish-dev` turn on)
+checks `apps/<crate name>/latest.json` in the public
+[g3techhq/releases](https://github.com/g3techhq/releases) repository at
+launch, and offers to download, verify and install a newer one. Settings
+shows the same in an **App updates** card. `src/updater.rs` holds the
+configuration, `src/components/updates.rs` the prompt and the card; web,
+server and store builds compile neither, and Play builds must never enable
+`sideload` (its `updater-install` declares `REQUEST_INSTALL_PACKAGES`).
+
+To finish the setup in a new app, once:
+
+1. In a checkout of g3techhq/releases, generate the app's release key, with
+   the crate name from `Cargo.toml`:
+
+   ```bash
+   node scripts/release-signing.mjs keygen ~/.g3-release <crate name>
+   ```
+
+2. Paste both lines of `~/.g3-release/<crate name>-updater.pub` into
+   `UPDATER_PUBLIC_KEY` in `src/updater.rs`, replacing the placeholder, and
+   commit it. Until then the updater logs that it is off and shows nothing.
+   The `.key` file is the secret: keep it out of every repository.
+
+Then, for each dev release, with `../releases` checked out on `main`:
+
+```bash
+SERVER_URL=https://staging.example.com just publish-dev --version 0.1.1 --notes @notes.md
+```
+
+It sets the version in `Cargo.toml` (Android's `versionCode` follows it and
+must rise every time), builds the APK with `--features mobile,sideload`, and
+runs the releases repository's `scripts/publish-local.mjs`, which signs it,
+creates a pre-release and moves `latest.json`. `--dry-run` signs and prints
+without publishing. Commit the version bump afterwards. The first install of
+a sideloaded build is by hand (`adb install -r dist/<crate name>-<version>.apk`);
+every later one comes through the app.
+
+A desktop build, if the app adds a `desktop` feature, should enable
+`g3-native-plugins/updater` in it and gate `updater::configure` and the
+components on it as well: a desktop build always installs its own updates.

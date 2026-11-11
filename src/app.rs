@@ -8,6 +8,7 @@
 use crate::{
     components::{
         AppShell, EditNote, NewNote, NoteDetail, Notes, Settings, SheetShell, SignIn, Splash,
+        UpdatePrompt,
     },
     db::ColorScheme,
     state::{AppState, AppStateProvider},
@@ -259,6 +260,9 @@ fn ThemedShell() -> Element {
             // and `use_alert` open, above every screen.
             AppWrapper { theme: app_theme(color_scheme), mode, text_selection: false,
                 Router::<Route> {}
+                // Inside `AppWrapper`, whose alerts it asks with. Renders
+                // nothing outside the sideloaded build.
+                UpdatePrompt {}
             }
         }
     }

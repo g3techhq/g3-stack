@@ -37,6 +37,7 @@ src/state.rs            AppState: user, appearance, `changed`
 src/data_change.rs      What each kind of mutation makes stale in the client cache
 src/main.rs             Server: DB connection, session layers, router
 src/server_url.rs       Mobile builds' server origin
+src/updater.rs          The sideloaded build's in-app updater (docs/deployment.md)
 src/health.rs           Container probes, merged outside the session layers
 src/auth/               Session guard, StateExtractor, guest sign-in, account deletion
 src/db/                 One file per table: row types + server functions
@@ -59,7 +60,7 @@ optimistic mutation, and the `DataChange` it reports. Copy their shape.
 ## Commands
 
 ```bash
-just check        # web + server + mobile type-check. `cargo check` alone is NOT enough
+just check        # web + server + mobile (+ sideload) type-check. `cargo check` alone is NOT enough
 just test         # Rust tests, web + server
 just lint         # clippy (all three) + biome
 just lint-strict  # the same with warnings as errors, as CI runs it
