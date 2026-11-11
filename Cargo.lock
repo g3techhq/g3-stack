@@ -2914,7 +2914,7 @@ dependencies = [
 [[package]]
 name = "g3-ui"
 version = "0.7.0"
-source = "git+https://github.com/g3techhq/g3-ui?branch=main#e4480d5a8e992b48dfbbda3826ecfadb41c5292b"
+source = "git+https://github.com/g3techhq/g3-ui?branch=main#c42ec30d96969a360438aa739cc5f48495e00a85"
 dependencies = [
  "cfg-if",
  "chrono",
