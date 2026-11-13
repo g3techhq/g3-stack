@@ -91,6 +91,11 @@ whether there is a session. See [authentication.md](authentication.md).
   preference.
 - **Safe areas and the keyboard.** g3-ui's shell pads for notches and the home
   indicator. Keep content inside `Body` and it is handled.
+- **First paint.** The WebView paints its first page before the app's first
+  render, and only a web build puts the stylesheets in that page's head. `main`
+  launches with `app::native_head()`, a `g3_ui::NativeHead` with the
+  stylesheets and the theme's colors, so the app never shows unstyled or on a
+  white page. Add any new stylesheet there as well as to its `document::Link`.
 
 ---
 

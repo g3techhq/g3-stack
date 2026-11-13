@@ -143,5 +143,10 @@ fn main() {
     // Before launch too, so the update prompt finds the updater ready. Only
     // the sideloaded build has one.
     updater::configure();
+    #[cfg(feature = "mobile")]
+    dioxus::LaunchBuilder::new()
+        .with_cfg(dioxus::mobile::Config::new().with_custom_head(app::native_head()))
+        .launch(App);
+    #[cfg(not(feature = "mobile"))]
     dioxus::launch(App);
 }

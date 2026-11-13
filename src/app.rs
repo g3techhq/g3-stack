@@ -31,6 +31,18 @@ const TAILWIND_CSS: Asset = asset!(
     AssetOptions::css().with_static_head(true)
 );
 
+/// The head of the mobile WebView's first page, so the first paint is already
+/// styled and in the theme's colors (see [`g3_ui::NativeHead`]). The theme is
+/// the automatic one: the signed-in user's color scheme is not known until
+/// after launch.
+#[cfg(feature = "mobile")]
+pub fn native_head() -> String {
+    g3_ui::NativeHead::new()
+        .theme(&app_theme(ColorScheme::Auto))
+        .stylesheet(TAILWIND_CSS)
+        .to_string()
+}
+
 /// Declared rather than left to the browser, which otherwise requests
 /// `/favicon.ico` on every load and takes a 404 for it.
 const FAVICON: Asset = asset!("/assets/logo.svg");
