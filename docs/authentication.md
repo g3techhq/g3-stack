@@ -249,8 +249,25 @@ guest account" is an `UPDATE $user SET email = ..` on the signed-in user rather
 than a second account and a data migration.
 
 **Password sign-in** needs a slow hash (`argon2`), rate limiting on the
-endpoint, and a reset flow. If you do not need passwords, prefer an OAuth
-provider or an emailed one-time code.
+endpoint, email verification and a reset flow. If you do not need passwords,
+prefer an OAuth provider.
+
+g3-auth's `email` feature has the shared part (media-mancer,
+greenside-partee and donation-engine use it): an SMTP `Mailer`, the
+verification, reset and "password changed" messages, single-use links,
+`email::sign_in`, which refuses an unconfirmed email and mails a fresh link,
+and `enforce_credential_epoch`, which signs other devices out after a reset.
+The app keeps its own server functions, sign-up and screens (`/verify-email`
+and `/reset-password` by default). The account table needs `email_verified`
+and `session_epoch`; the `g3_auth::email` module docs list the fields, the
+flows and the layer.
+
+Mail goes through any SMTP provider. With Resend, verify a sending domain,
+then set `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587`,
+`SMTP_USERNAME=resend`, `SMTP_PASSWORD` to a sending-only API key and
+`SMTP_FROM` to an address on that domain (`SMTP_REPLY_TO` for a support
+inbox). A debug build without `SMTP_HOST` logs each message, links included,
+so sign-up works locally.
 
 ---
 
